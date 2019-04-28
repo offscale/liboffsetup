@@ -35,8 +35,39 @@ struct Platform {
     download: Option<Download>,
 
     // Because Rust, we'll need to explicitly write each here
+
+    // Linux
     apt: Option<Vec<String>>,
+    aptitude: Option<Vec<String>>,
+    // https://wiki.sabayon.org/index.php?title=En:Entropy
+    equo: Option<Vec<String>>,
+    // https://wiki.gentoo.org/wiki/Handbook:AMD64/Working/Portage
+    emerge: Option<Vec<String>>,
+    // https://flathub.org
+    flatpak: Option<Vec<String>>,
+    // https://www.gnu.org/software/guix/
+    guix: Option<Vec<String>>,
+    // https://nixos.org/nix/manual/#chap-quick-start
+    nix: Option<Vec<String>>,
+    // http://www.openpkg.org/documentation/tutorial/
+    openpkg: Option<Vec<String>>,
+    // http://wiki.openmoko.org/wiki/Opkg
+    opkg: Option<Vec<String>>,
+    // https://wiki.archlinux.org/index.php/Pacman
+    pacman: Option<Vec<String>>,
+    // https://puppylinux.org/wikka/ppm
+    ppm: Option<Vec<String>>,
+    // https://github.com/examachine/pisi
+    pisi: Option<Vec<String>>,
+
+    // http://yum.baseurl.org
     yum: Option<Vec<String>>,
+    // https://rpm-software-management.github.io
+    dnf: Option<Vec<String>>,
+    // http://rpmfind.net/linux/rpm2html/search.php?query=up2date
+    up2date: Option<Vec<String>>,
+
+    apk: Option<Vec<String>>,
     ports: Option<Vec<String>>,
     brew: Option<Vec<String>>,
     choco: Option<Vec<String>>,
