@@ -1,7 +1,9 @@
 [package]
 name = "liboffsetup"
-version = "0.1.0"
-authors = ["Samuel Marks <samuelmarks@gmail.com>"]
+version = "0.0.1"
+authors = ["Samuel Marks @SamuelMarks"]
 edition = "2018"
+license = "Apache-2.0"
 
 [dependencies]
+structopt = "0.2.15"
