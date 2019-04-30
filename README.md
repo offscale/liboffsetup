@@ -26,7 +26,7 @@ $ cargo install --force cargo-make
 # Install rustfmt (Rust formatter)
 $ rustup component add rustfmt
 # Clone this repo
-$ git clone https://github.com/offscale/offregisters-lib && cd offregisters-lib
+$ git clone https://github.com/offscale/liboffsetup && cd liboffsetup
 # Run tests
 $ cargo test
 # Format, build and test
