@@ -1,0 +1,82 @@
+name: random python project name
+version: '0.1.4'
+dependencies:
+  platforms:
+    ubuntu:
+      versions:
+        - '14.04'
+        - '>16.04'
+      apt:
+        sharable:
+          - build-essential
+          - cmake
+          - python2
+          - curl
+    mac:
+      versions:
+        - '>=10.14'
+      brew:
+        sharable:
+          - cmake
+          - python@2
+          - curl
+    windows:
+      versions:
+        - '>=7600'
+      arch: x86_64
+      download_directory: 'C:\opt\Downloads'
+      download:
+        - uri: https://www.7-zip.org/a/7z1900-x64.msi
+          sha512: 7837a8677a01eed9c3309923f7084bc864063ba214ee169882c5b04a7a8b198ed052c15e981860d9d7952c98f459a4fab87a72fd78e7d0303004dcb86f4324c8
+          sharable: true
+        - uri: https://github.com/mridgers/clink/releases/download/1.0.0a1/clink-1.0.0a1.823d84.zip
+          sha512: 343f87eb67177d7bcb9982b34bceb2f056e12aa1140e1d12b25863ec033ad2f40735647cbd79cc528d8bddcd929df99546a7c398f79365f9cf246011c63f724f
+          extract: true
+          sharable: true
+        - uri: https://github.com/git-for-windows/git/releases/download/v2.21.0.windows.1/Git-2.21.0-64-bit.exe
+          sha512: 127633e0e18014803fe459e0aa1084d42025e61d92c279a729c85cb81c56befa97b9e98ecd61dd2892a3c78509c361477c6e8294f0098f8a19d0667fe57b9476
+          sharable: true
+        - uri: https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi
+          sha512: 155b52a2ed59730983346899a96f42eb76ff5b4c2b7deb8b5946008b95bb0c6c1e6da31c80b7c68f5fe6881ddaa65ce321c6a52f3b0fc34ee98b4dd8dfa42772
+          sharable: true
+        - uri: https://github.com/Kitware/CMake/releases/download/v3.14.2/cmake-3.14.2-win64-x64.msi
+          sha512: 4da6b06831817fa5772310063c8fc1e4dcf7840772e3802108c0ca1f0587b7d2e4e8c2d0995e42860c5625b5b0f7e144d4a4139c6cba1a17f52de36551d10833
+          sharable: true
+        - uri: https://www.python.org/ftp/python/2.7.16/python-2.7.16.amd64.msi
+          sha512: 47c1518d1da939e3ba6722c54747778b93a44c525bcb358b253c23b2510374a49a43739c8d0454cedade858f54efa6319763ba33316fdc721305bc457efe4ffb
+          sharable: true
+        - uri: https://curl.haxx.se/windows/dl-7.64.1/curl-7.64.1-win64-mingw.zip
+          sha512: 05eb09949aea21c2cb3da03af5b8e8bd5813865f5096924dbe54a2e5a5cb7213ccf2251aa076f0cad44654913d1f18badb1565b023c4b033a56ba3eb0507521c
+          extract: true
+      install_prefix: 'C:\opt\bin'
+      install_all: true
+  applications:
+    postgres:
+      pkg: https://github.com/offscale/offpostgres
+      version: '>9.6.4'
+      env: RDBMS_URI
+      features:
+        - postgis
+      skip_install: false
+      install_priority:
+        - docker
+        - native
+      users:
+        - name: awesome_user
+          password: '$env_var'
+      databases:
+        - name: awesome_db
+          owner: awesome_user
+    redis:
+      version: '>5'
+      env: REDIS_URL
+      skip_install: true
+      fail_silently: true
+      install_priority:
+        - docker
+        - native
+exposes:
+  ports:
+    tcp:
+      - 80
+      - 443
