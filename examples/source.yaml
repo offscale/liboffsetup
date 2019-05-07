@@ -1,0 +1,10 @@
+download:
+  uri: http://download.redis.io/releases/redis-5.0.4.tar.gz
+  sha512: 336929c81a476e2a23a64f867823d70c3aab66fb0098eef2e61630be6522ff2f6af680169ffcae35d559758b2c6b56f88c5a953a538291fea886449cba33b8ad
+  extract: true
+system:
+  apt:
+    - make
+    - gcc
+install:
+  $ref: "#/dependencies/platforms/_shared/_source/install"
