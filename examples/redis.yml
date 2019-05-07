@@ -1,0 +1,55 @@
+name: redis-config
+version: '5.0.4'
+dependencies:
+  platforms:
+    ubuntu:
+      pre_install:
+        - sudo add-apt-repository ppa:chris-lea/redis-server
+        - sudo apt update
+      versions:
+        - '14.04'
+        - '>16.04'
+      system:
+        apt:
+          - redis
+      source:
+        download:
+          uri: http://download.redis.io/releases/redis-5.0.4.tar.gz
+          sha512: 336929c81a476e2a23a64f867823d70c3aab66fb0098eef2e61630be6522ff2f6af680169ffcae35d559758b2c6b56f88c5a953a538291fea886449cba33b8ad
+          extract: true
+        system:
+          apt:
+            - make
+            - gcc
+        install:
+          $ref: "#/dependencies/platforms/_shared/_source/install"
+    mac:
+      versions:
+        - '>=10.14'
+      system:
+        brew:
+          - redis
+      source:
+        download:
+          uri: http://download.redis.io/releases/redis-5.0.4.tar.gz
+          sha512: 336929c81a476e2a23a64f867823d70c3aab66fb0098eef2e61630be6522ff2f6af680169ffcae35d559758b2c6b56f88c5a953a538291fea886449cba33b8ad
+          extract: true
+        install:
+          $ref: "#/dependencies/platforms/_shared/_source/install"
+    windows:
+      versions:
+        - '>=7600'
+      arch: x86_64
+      download_directory: 'C:\opt\Downloads'
+      download:
+        uri: https://github.com/tporadowski/redis/releases/download/v4.0.2.3-alpha/Redis-x64-4.0.2.3.msi
+        sha512: 2d0124c0b59789018d07e449be2d09cc8b9d2355c7a2d35fae41402d9866e1724b7feb82ead27e8bd350d484c3d90317084a43b89f955d7a416346981ff8087e
+      install_prefix: 'C:\opt\bin'
+      install_all: true
+      install_priority:
+        - docker
+        - native
+exposes:
+  ports:
+    tcp:
+      - 6379

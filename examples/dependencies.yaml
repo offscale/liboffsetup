@@ -1,0 +1,11 @@
+platforms:
+  ubuntu:
+    pre_install:
+      - sudo add-apt-repository ppa:chris-lea/redis-server
+      - sudo apt update
+    versions:
+      - '14.04'
+      - '>16.04'
+    system:
+      apt:
+        - redis
