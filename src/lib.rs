@@ -29,7 +29,7 @@ impl FromStr for VecOfU16 {
 // Since structopt/clap does not support config file, only cli and env, we split the two between
 // 1) config for file and environment
 // 2) structopt for CLI
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct OffSetup {
     name: String,
     version: String,
@@ -56,7 +56,7 @@ pub struct OffSetupCli {
     verbose: u8,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct System {
     // Linux
     apt: Option<Vec<String>>,
@@ -95,13 +95,13 @@ struct System {
     choco: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct Dependencies {
-    applications: HashMap<String, Application>,
-    platforms: HashMap<String, Platform>,
+    applications: Option<HashMap<String, Application>>,
+    platforms: Option<HashMap<String, Platform>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct Application {
     pkg: Option<String>,
     version: Option<String>,
@@ -112,7 +112,7 @@ struct Application {
     fail_silently: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct Platform {
     versions: Vec<String>,
 
@@ -120,33 +120,33 @@ struct Platform {
 
     source: Option<Source>,
 
-    system: Option<HashMap<String, System>>,
-
+    system: Option<System>,
     pre_install: Option<Vec<String>>,
     install_priority: Option<Vec<String>>,
     skip_install: Option<bool>,
     fail_silently: Option<bool>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct Source {
     // TODO: Force `download_directory` to be required if `download` specified
     download_directory: Option<String>,
     download: Option<Download>,
 
-    system: Option<HashMap<String, System>>,
+    system: Option<System>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct Download {
-    uri: String,
-    // TODO: parse to Uri
-    hash_protocol: Option<String>,
+    extract: Option<bool>,
     // TODO: use Digest trait somehow, and include sha512 default
-    hash: String,
+    sha512: String,
+    shareable: Option<bool>,
+    // TODO: parse to Uri
+    uri: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 enum Exposes {
     Ports {
         tcp: Option<Vec<u16>>,
@@ -204,7 +204,7 @@ mod tests {
             let mut s = Config::new();
 
             s.merge(File::with_name("examples/exposes"))?;
-            println!("merged: {:?}", s);
+            println!("merged: {:#?}", s);
 
             match s.get::<Option<Vec<u16>>>("ports.tcp") {
                 Ok(udp) => assert!(udp.is_some()),
@@ -214,7 +214,7 @@ mod tests {
             s.try_into()
         };
         match f() {
-            Ok(s) => println!("Successful: {:?}", s),
+            Ok(s) => println!("Successful: {:#?}", s),
             Err(e) => panic!(format!("Failed to get configuration: {:?}", e)),
         }
     }
@@ -225,7 +225,7 @@ mod tests {
             let mut s = Config::new();
 
             s.merge(File::with_name("examples/simple"))?;
-            println!("merged: {:?}", s);
+            println!("merged: {:#?}", s);
 
             match s.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
                 Ok(tcp) => assert!(tcp.is_some()),
@@ -235,8 +235,79 @@ mod tests {
             s.try_into()
         };
         match f() {
-            Ok(s) => println!("Successful: {:?}", s),
+            Ok(s) => println!("Successful simple: {:#?}", s),
             Err(e) => panic!(format!("Failed to get configuration: {:?}", e)),
+        }
+    }
+
+    #[test]
+    fn can_read_system_file() {
+        let f = || -> Result<System, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/system"))?;
+            println!("merged: {:#?}", s);
+
+            match s.get::<Option<Vec<String>>>("apt") {
+                Ok(tcp) => assert!(tcp.is_some()),
+                Err(e) => panic!(format!("error getting apt from system file: {:?}", e)),
+            }
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => println!("Successful system: {:#?}", s),
+            Err(e) => panic!(format!("Failed to get system configuration: {:?}", e)),
+        }
+    }
+
+    #[test]
+    fn can_read_platform_file() {
+        let f = || -> Result<Platform, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/platform"))?;
+            println!("merged: {:#?}", s);
+
+            let key = "system.apt";
+            match s.get::<Option<Vec<String>>>(key) {
+                Ok(apt) => {
+                    println!("{:?}: {:?}", key, apt);
+                    assert!(apt.is_some())
+                }
+                Err(e) => panic!(format!("error getting apt from platform file: {:?}", e)),
+            }
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => println!("Successful platform: {:#?}", s),
+            Err(e) => panic!(format!("Failed to get platform configuration: {:?}", e)),
+        }
+    }
+
+    #[test]
+    fn can_read_dependencies_file() {
+        let f = || -> Result<Dependencies, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/dependencies"))?;
+            println!("merged: {:#?}", s);
+
+            let key = "platforms.ubuntu.system.apt";
+            match s.get::<Option<Vec<String>>>(key) {
+                Ok(apt) => {
+                    println!("{:?}: {:?}", key, apt);
+                    assert!(apt.is_some())
+                }
+                Err(e) => panic!(format!("error getting apt from dependencies: {:?}", e)),
+            }
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => println!("Successful dependencies: {:#?}", s),
+            Err(e) => panic!(format!("Failed to get dependencies configuration: {:?}", e)),
         }
     }
 
@@ -246,10 +317,10 @@ mod tests {
             let mut s = Config::new();
 
             s.merge(File::with_name("examples/redis"))?;
-            println!("merged: {:?}", s);
+            println!("merged: {:#?}", s);
 
             println!(
-                "platforms: {:?}",
+                "redis platforms: {:#?}",
                 s.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
             );
 
@@ -270,11 +341,30 @@ mod tests {
         };
         match f() {
             Ok(s) => {
-                println!("Successful: {:?}", s);
+                println!("Successful redis: {:#?}", s);
                 assert!(s.dependencies.is_some());
-                assert!(s.dependencies.unwrap().platforms.get("windows").is_some())
+                assert!(s
+                    .dependencies
+                    .clone()
+                    .unwrap()
+                    .platforms
+                    .unwrap()
+                    .get("windows")
+                    .is_some());
+                assert!(s
+                    .dependencies
+                    .unwrap()
+                    .platforms
+                    .unwrap()
+                    .get("ubuntu")
+                    .unwrap()
+                    .system
+                    .clone()
+                    .unwrap()
+                    .apt
+                    .is_some());
             }
-            Err(e) => panic!(format!("Failed to get configuration: {:?}", e)),
+            Err(e) => panic!(format!("Failed to get redis configuration: {:?}", e)),
         }
     }
 }
