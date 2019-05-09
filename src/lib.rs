@@ -6,8 +6,7 @@ use std::string::ParseError;
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
-use http::Uri;
-
+use urlparse::{urlparse, Url};
 
 #[derive(Debug, Deserialize)]
 struct VecOfU16 {
@@ -140,15 +139,17 @@ struct Source {
 
 pub trait DeserializeWith: Sized {
     fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error>
-        where D: Deserializer<'de>;
+    where
+        D: Deserializer<'de>;
 }
 
-impl DeserializeWith for Uri {
-    fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error> where D: Deserializer<'de> {
+impl DeserializeWith for Url {
+    fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
         let s = String::deserialize(de)?;
-        Uri::from_str(&s).map_err(|e| {
-            serde::de::Error::custom(format!("Invalid URI provided: {:?}", e))
-        })
+        Ok(urlparse(&s))
     }
 }
 
@@ -157,8 +158,8 @@ struct Download {
     extract: Option<bool>,
     sha512: String,
     shareable: Option<bool>,
-    #[serde(deserialize_with="Uri::deserialize_with")]
-    uri: Uri,
+    #[serde(deserialize_with = "Url::deserialize_with")]
+    uri: Url,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -253,7 +254,7 @@ mod tests {
             Ok(s) => {
                 println!("Successful simple: {:#?}", s);
                 assert_eq!(s.name, "random python project name")
-            },
+            }
             Err(e) => panic!(format!("Failed to get simple configuration: {:?}", e)),
         }
     }
@@ -276,8 +277,11 @@ mod tests {
         match f() {
             Ok(s) => {
                 println!("Successful source: {:#?}", s);
-                assert_eq!(s.download.unwrap().uri.host().unwrap(), "download.redis.io")
-            },
+                assert_eq!(
+                    s.download.unwrap().uri.hostname.unwrap().to_string(),
+                    "download.redis.io"
+                )
+            }
             Err(e) => panic!(format!("Failed to get system configuration: {:?}", e)),
         }
     }
