@@ -1,12 +1,14 @@
-use std::collections::HashMap;
-use std::env;
-use std::str::FromStr;
-use std::string::ParseError;
+#![feature(custom_attribute)]
+
+use std::{collections::HashMap, env, str::FromStr, string::ParseError};
 
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 use urlparse::{urlparse, Url};
+use validator::{Validate, ValidationError};
+#[macro_use]
+extern crate validator_derive;
 
 #[derive(Debug, Deserialize)]
 struct VecOfU16 {
@@ -128,9 +130,22 @@ struct Platform {
     fail_silently: Option<bool>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+fn validate_source_download(data: &Source) -> Result<(), ValidationError> {
+    if data.download_directory.is_none() && data.download.is_some() {
+        return Err(ValidationError::new("download_directory_required"));
+    }
+
+    if data.download_directory.is_some() && data.download.is_none() {
+        return Err(ValidationError::new("download_is_required"));
+    }
+
+    Ok(())
+}
+
+#[derive(Clone, Debug, Deserialize, Validate)]
+#[validate(schema(function = "validate_source_download", skip_on_field_errors = "false"))]
 struct Source {
-    // TODO: Force `download_directory` to be required if `download` specified
+    // TODO: find out if automatic/implicit validate() call can be made after Deserialize
     download_directory: Option<String>,
     download: Option<Download>,
 
@@ -269,20 +284,130 @@ mod tests {
 
             match s.get::<Option<Download>>("download") {
                 Ok(download) => assert!(download.is_some()),
-                Err(e) => panic!(format!("error getting download from source file: {:?}", e)),
+                Err(e) => panic!(format!("error getting download from Source file: {:?}", e)),
             }
 
             s.try_into()
         };
         match f() {
             Ok(s) => {
-                println!("Successful source: {:#?}", s);
+                println!("Successful Source: {:#?}", s);
                 assert_eq!(
                     s.download.unwrap().uri.hostname.unwrap().to_string(),
                     "download.redis.io"
                 )
             }
-            Err(e) => panic!(format!("Failed to get system configuration: {:?}", e)),
+            Err(e) => panic!(format!("Failed to get Source configuration: {:?}", e)),
+        }
+    }
+
+    #[test]
+    fn can_validate_valid_source() {
+        let f = || -> Result<Source, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/valid_source_download"))?;
+            println!("merged: {:#?}", s);
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => {
+                println!("Successfully loaded valid Source: {:#?}", s);
+                assert_eq!(
+                    s.clone()
+                        .download
+                        .unwrap()
+                        .uri
+                        .hostname
+                        .unwrap()
+                        .to_string(),
+                    "download.redis.io"
+                );
+                match s.validate() {
+                    Ok(_) => (),
+                    Err(e) => panic!(format!("Valid Source download failed validation: {:?}", e)),
+                }
+            }
+            Err(e) => panic!(format!("Failed to get valid Source configuration: {:?}", e)),
+        }
+    }
+
+    #[test]
+    fn can_validate_invalid_source_no1() {
+        let f = || -> Result<Source, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/invalid_source_download_no1"))?;
+            println!("merged: {:#?}", s);
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => {
+                println!("Successfully loaded invalid Source no1: {:#?}", s);
+                assert_eq!(
+                    s.clone()
+                        .download
+                        .unwrap()
+                        .uri
+                        .hostname
+                        .unwrap()
+                        .to_string(),
+                    "download.redis.io"
+                );
+                assert_eq!(true, s.clone().download_directory.is_none());
+                match s.validate() {
+                    Ok(valid) => panic!(format!(
+                        "Invalid Source download is not supposed to pass: {:#?}",
+                        valid
+                    )),
+                    Err(_) => (),
+                }
+            }
+            Err(e) => panic!(format!(
+                "Failed to get invalid Source configuration: {:?}",
+                e
+            )),
+        }
+    }
+
+    #[test]
+    fn can_validate_invalid_source_no2() {
+        let f = || -> Result<Source, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/invalid_source_download_no2"))?;
+            println!("merged: {:#?}", s);
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => {
+                println!("Successfully loaded invalid Source 2: {:#?}", s);
+                assert_eq!(
+                    s.clone()
+                        .download
+                        .unwrap()
+                        .uri
+                        .hostname
+                        .unwrap()
+                        .to_string(),
+                    "download.redis.io"
+                );
+                assert_eq!(true, s.clone().download_directory.is_none());
+                match s.validate() {
+                    Ok(valid) => panic!(format!(
+                        "Invalid Source download 2 is not supposed to pass: {:#?}",
+                        valid
+                    )),
+                    Err(_) => (),
+                }
+            }
+            Err(e) => panic!(format!(
+                "Failed to get invalid Source 2 configuration: {:?}",
+                e
+            )),
         }
     }
 
