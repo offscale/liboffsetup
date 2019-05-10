@@ -4,8 +4,9 @@ use std::str::FromStr;
 use std::string::ParseError;
 
 use config::{Config, ConfigError, Environment, File};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
+use urlparse::{urlparse, Url};
 
 #[derive(Debug, Deserialize)]
 struct VecOfU16 {
@@ -136,14 +137,29 @@ struct Source {
     system: Option<System>,
 }
 
+pub trait DeserializeWith: Sized {
+    fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>;
+}
+
+impl DeserializeWith for Url {
+    fn deserialize_with<'de, D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(de)?;
+        Ok(urlparse(&s))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 struct Download {
     extract: Option<bool>,
-    // TODO: use Digest trait somehow, and include sha512 default
     sha512: String,
     shareable: Option<bool>,
-    // TODO: parse to Uri
-    uri: String,
+    #[serde(deserialize_with = "Url::deserialize_with")]
+    uri: Url,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -235,8 +251,38 @@ mod tests {
             s.try_into()
         };
         match f() {
-            Ok(s) => println!("Successful simple: {:#?}", s),
-            Err(e) => panic!(format!("Failed to get configuration: {:?}", e)),
+            Ok(s) => {
+                println!("Successful simple: {:#?}", s);
+                assert_eq!(s.name, "random python project name")
+            }
+            Err(e) => panic!(format!("Failed to get simple configuration: {:?}", e)),
+        }
+    }
+
+    #[test]
+    fn can_read_source_file() {
+        let f = || -> Result<Source, ConfigError> {
+            let mut s = Config::new();
+
+            s.merge(File::with_name("examples/source"))?;
+            println!("merged: {:#?}", s);
+
+            match s.get::<Option<Download>>("download") {
+                Ok(download) => assert!(download.is_some()),
+                Err(e) => panic!(format!("error getting download from source file: {:?}", e)),
+            }
+
+            s.try_into()
+        };
+        match f() {
+            Ok(s) => {
+                println!("Successful source: {:#?}", s);
+                assert_eq!(
+                    s.download.unwrap().uri.hostname.unwrap().to_string(),
+                    "download.redis.io"
+                )
+            }
+            Err(e) => panic!(format!("Failed to get system configuration: {:?}", e)),
         }
     }
 
