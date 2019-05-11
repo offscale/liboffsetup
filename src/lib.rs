@@ -1,5 +1,8 @@
 #![feature(custom_attribute)]
 
+#[macro_use]
+extern crate validator_derive;
+
 use std::{collections::HashMap, env, str::FromStr, string::ParseError};
 
 use config::{Config, ConfigError, Environment, File};
@@ -7,8 +10,6 @@ use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 use urlparse::{urlparse, Url};
 use validator::{Validate, ValidationError};
-#[macro_use]
-extern crate validator_derive;
 
 #[derive(Debug, Deserialize)]
 struct VecOfU16 {
@@ -61,8 +62,12 @@ pub struct OffSetupCli {
 
 #[derive(Clone, Debug, Deserialize)]
 struct System {
-    // Linux
+    /// Linux
+    // https://manpages.debian.org/stretch/apt/apt.8.en.html
     apt: Option<Vec<String>>,
+    // https://manpages.debian.org/stretch/apt/apt-get.8.en.html
+    apt_get: Option<Vec<String>>,
+    // https://manpages.debian.org/stretch/aptitude/aptitude.8.en.html
     aptitude: Option<Vec<String>>,
     // https://wiki.sabayon.org/index.php?title=En:Entropy
     equo: Option<Vec<String>>,
@@ -84,18 +89,40 @@ struct System {
     ppm: Option<Vec<String>>,
     // https://github.com/examachine/pisi
     pisi: Option<Vec<String>>,
-
     // http://yum.baseurl.org
     yum: Option<Vec<String>>,
     // https://rpm-software-management.github.io
     dnf: Option<Vec<String>>,
     // http://rpmfind.net/linux/rpm2html/search.php?query=up2date
     up2date: Option<Vec<String>>,
+    // https://metacpan.org/pod/distribution/urpmi/pod/8/urpmihowto.pod
+    urpmi: Option<Vec<String>>,
+    // https://slackpkg.org/documentation.html
+    slackpkg: Option<Vec<String>>,
+    // https://software.jaos.org/git/slapt-get/plain/README
+    slapt_get: Option<Vec<String>>,
+    // https://docs.snapcraft.io/getting-started
+    snap: Option<Vec<String>>,
+    // http://www.brunolinux.com/03-Installing_Software/Swaret.html
+    swaret: Option<Vec<String>>,
+
+    /// Windows
+    // https://chocolatey.org
+    choco: Option<Vec<String>>,
+
+    /// OS X
+    // https://brew.sh
+    brew: Option<Vec<String>>,
+
+    /// BSD
+    // https://www.freebsd.org/cgi/man.cgi?query=pkg
+    pkg: Option<Vec<String>>,
+
+    /// Windows, Linux, OS X
+    // https://0install.de/docs/commands/
+    _0install: Option<Vec<String>>,
 
     apk: Option<Vec<String>>,
-    ports: Option<Vec<String>>,
-    brew: Option<Vec<String>>,
-    choco: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
