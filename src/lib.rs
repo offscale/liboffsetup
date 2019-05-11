@@ -193,35 +193,38 @@ enum Exposes {
 }
 
 impl Default for OffSetup {
-    fn default() -> Result<OffSetup, ConfigError> {
-        let mut config = Config::new();
+    fn default() -> Self {
+        const DEFAULT: fn() -> Result<OffSetup, ConfigError> = || {
+            let mut config = Config::new();
 
-        // Start off by merging in the "default" configuration file
-        config.merge(File::from(PathBuf::from("config").join("default")))?;
+            // Start off by merging in the "default" configuration file
+            config.merge(File::from(PathBuf::from("config").join("default")))?;
 
-        // Add in the current environment file
-        // Default to 'development' env
-        // Note that this file is _optional_
-        let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
-        config.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
+            // Add in the current environment file
+            // Default to 'development' env
+            // Note that this file is _optional_
+            let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
+            config.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
 
-        // Add in a local configuration file
-        // This file shouldn't be checked in to git
-        config.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
+            // Add in a local configuration file
+            // This file shouldn't be checked in to git
+            config.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
 
-        // Add in settings from the environment (with a prefix of APP)
-        // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-        config.merge(Environment::with_prefix("app"))?;
+            // Add in settings from the environment (with a prefix of APP)
+            // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
+            config.merge(Environment::with_prefix("app"))?;
 
-        // You may also programmatically change settings
-        config.set("database.url", "postgresql://")?;
+            // You may also programmatically change settings
+            config.set("database.url", "postgresql://")?;
 
-        // Now that we're done, let's access our configuration
-        println!("debug: {:?}", config.get_bool("debug"));
-        println!("database: {:?}", config.get::<String>("database.url"));
+            // Now that we're done, let's access our configuration
+            println!("debug: {:?}", config.get_bool("debug"));
+            println!("database: {:?}", config.get::<String>("database.url"));
 
-        // You can deserialize (and thus freeze) the entire configuration
-        config.try_into()
+            // You can deserialize (and thus freeze) the entire configuration
+            config.try_into()
+        };
+        DEFAULT().unwrap()
     }
 }
 
@@ -240,7 +243,6 @@ mod tests {
         println!("testing ports...");
         let get_exposes = || -> Result<Exposes, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(PathBuf::from("examples").join("exposes")))?;
             println!("merged: {:#?}", config);
 
@@ -261,7 +263,6 @@ mod tests {
     fn can_read_simple_file() {
         let get_offsetup = || -> Result<OffSetup, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(PathBuf::from("examples").join("simple")))?;
             println!("merged: {:#?}", config);
 
@@ -285,7 +286,6 @@ mod tests {
     fn can_read_source_file() {
         let get_source = || -> Result<Source, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(PathBuf::from("examples").join("source")))?;
             println!("merged: {:#?}", config);
 
@@ -312,7 +312,6 @@ mod tests {
     fn can_validate_valid_source() {
         let get_source = || -> Result<Source, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(
                 PathBuf::from("examples").join("valid_source_download"),
             ))?;
@@ -347,7 +346,6 @@ mod tests {
     fn can_validate_invalid_source_no1() {
         let get_source = || -> Result<Source, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(
                 PathBuf::from("examples").join("invalid_source_download_no1"),
             ))?;
@@ -389,7 +387,6 @@ mod tests {
     fn can_validate_invalid_source_no2() {
         let get_source = || -> Result<Source, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(
                 PathBuf::from("examples").join("invalid_source_download_no2"),
             ))?;
@@ -431,7 +428,6 @@ mod tests {
     fn can_read_system_file() {
         let get_system = || -> Result<System, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(PathBuf::from("examples").join("system")))?;
             println!("merged: {:#?}", config);
 
@@ -452,7 +448,6 @@ mod tests {
     fn can_read_platform_file() {
         let get_platform = || -> Result<Platform, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(PathBuf::from("examples").join("platform")))?;
             println!("merged: {:#?}", config);
 
@@ -477,7 +472,6 @@ mod tests {
     fn can_read_dependencies_file() {
         let get_dependencies = || -> Result<Dependencies, ConfigError> {
             let mut config = Config::default();
-
             config.merge(File::from(PathBuf::from("examples").join("dependencies")))?;
             println!("merged: {:#?}", config);
 
@@ -500,33 +494,31 @@ mod tests {
 
     #[test]
     fn can_read_redis_file() {
-        let get_offsetup = || -> Result<OffSetup, ConfigError> {
-            let mut config = Config::default();
+        let mut config = Config::default();
+        config
+            .merge(File::from(PathBuf::from("examples").join("redis")))
+            .unwrap();
+        println!("merged: {:#?}", config);
 
-            config.merge(File::from(PathBuf::from("examples").join("redis")))?;
-            println!("merged: {:#?}", config);
+        println!(
+            "redis platforms: {:#?}",
+            config.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
+        );
 
-            println!(
-                "redis platforms: {:#?}",
-                config.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
-            );
-
-            match config.get::<Platform>("dependencies.platforms.windows") {
-                Ok(windows) => {
-                    assert!(windows.arch.is_some());
-                    assert_eq!(windows.arch.unwrap(), "x86_64")
-                }
-                Err(e) => panic!(format!("error getting windows platform: {:?}", e)),
+        match config.get::<Platform>("dependencies.platforms.windows") {
+            Ok(windows) => {
+                assert!(windows.arch.is_some());
+                assert_eq!(windows.arch.unwrap(), "x86_64")
             }
+            Err(e) => panic!(format!("error getting windows platform: {:?}", e)),
+        }
 
-            match config.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
-                Ok(tcp) => assert!(tcp.is_some()),
-                Err(e) => panic!(format!("error getting tcp: {:?}", e)),
-            }
+        match config.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
+            Ok(tcp) => assert!(tcp.is_some()),
+            Err(e) => panic!(format!("error getting tcp: {:?}", e)),
+        }
 
-            config.try_into()
-        };
-        match get_offsetup() {
+        match config.try_into() as Result<OffSetup, ConfigError> {
             Ok(offsetup) => {
                 println!("Successful redis: {:#?}", offsetup);
                 assert!(offsetup.dependencies.is_some());
