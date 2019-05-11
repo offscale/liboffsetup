@@ -192,36 +192,36 @@ enum Exposes {
     },
 }
 
-impl OffSetup {
-    pub fn new() -> Result<Self, ConfigError> {
-        let mut s = Config::new();
+impl Default for OffSetup {
+    fn default() -> Result<OffSetup, ConfigError> {
+        let mut config = Config::new();
 
         // Start off by merging in the "default" configuration file
-        s.merge(File::from(PathBuf::from("config").join("default")))?;
+        config.merge(File::from(PathBuf::from("config").join("default")))?;
 
         // Add in the current environment file
         // Default to 'development' env
         // Note that this file is _optional_
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
-        s.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
+        config.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
 
         // Add in a local configuration file
         // This file shouldn't be checked in to git
-        s.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
+        config.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
 
         // Add in settings from the environment (with a prefix of APP)
         // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-        s.merge(Environment::with_prefix("app"))?;
+        config.merge(Environment::with_prefix("app"))?;
 
         // You may also programmatically change settings
-        s.set("database.url", "postgresql://")?;
+        config.set("database.url", "postgresql://")?;
 
         // Now that we're done, let's access our configuration
-        println!("debug: {:?}", s.get_bool("debug"));
-        println!("database: {:?}", s.get::<String>("database.url"));
+        println!("debug: {:?}", config.get_bool("debug"));
+        println!("database: {:?}", config.get::<String>("database.url"));
 
         // You can deserialize (and thus freeze) the entire configuration
-        s.try_into()
+        config.try_into()
     }
 }
 
@@ -238,44 +238,44 @@ mod tests {
     #[test]
     fn can_read_simple_ports() {
         println!("testing ports...");
-        let f = || -> Result<Exposes, ConfigError> {
-            let mut s = Config::new();
+        let get_exposes = || -> Result<Exposes, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("exposes")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("exposes")))?;
+            println!("merged: {:#?}", config);
 
-            match s.get::<Option<Vec<u16>>>("ports.tcp") {
+            match config.get::<Option<Vec<u16>>>("ports.tcp") {
                 Ok(udp) => assert!(udp.is_some()),
                 Err(e) => panic!(format!("error getting tdp: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => println!("Successful: {:#?}", s),
+        match get_exposes() {
+            Ok(exposes) => println!("Successful: {:#?}", exposes),
             Err(e) => panic!(format!("Failed to get configuration: {:?}", e)),
         }
     }
 
     #[test]
     fn can_read_simple_file() {
-        let f = || -> Result<OffSetup, ConfigError> {
-            let mut s = Config::new();
+        let get_offsetup = || -> Result<OffSetup, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("simple")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("simple")))?;
+            println!("merged: {:#?}", config);
 
-            match s.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
+            match config.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
                 Ok(tcp) => assert!(tcp.is_some()),
                 Err(e) => panic!(format!("error getting tcp: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => {
-                println!("Successful simple: {:#?}", s);
-                assert_eq!(s.name, "random python project name")
+        match get_offsetup() {
+            Ok(offsetup) => {
+                println!("Successful simple: {:#?}", offsetup);
+                assert_eq!(offsetup.name, "random python project name")
             }
             Err(e) => panic!(format!("Failed to get simple configuration: {:?}", e)),
         }
@@ -283,24 +283,24 @@ mod tests {
 
     #[test]
     fn can_read_source_file() {
-        let f = || -> Result<Source, ConfigError> {
-            let mut s = Config::new();
+        let get_source = || -> Result<Source, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("source")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("source")))?;
+            println!("merged: {:#?}", config);
 
-            match s.get::<Option<Download>>("download") {
+            match config.get::<Option<Download>>("download") {
                 Ok(download) => assert!(download.is_some()),
                 Err(e) => panic!(format!("error getting download from Source file: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => {
-                println!("Successful Source: {:#?}", s);
+        match get_source() {
+            Ok(source) => {
+                println!("Successful Source: {:#?}", source);
                 assert_eq!(
-                    s.download.unwrap().uri.hostname.unwrap().to_string(),
+                    source.download.unwrap().uri.hostname.unwrap().to_string(),
                     "download.redis.io"
                 )
             }
@@ -310,21 +310,22 @@ mod tests {
 
     #[test]
     fn can_validate_valid_source() {
-        let f = || -> Result<Source, ConfigError> {
-            let mut s = Config::new();
+        let get_source = || -> Result<Source, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(
+            config.merge(File::from(
                 PathBuf::from("examples").join("valid_source_download"),
             ))?;
-            println!("merged: {:#?}", s);
+            println!("merged: {:#?}", config);
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => {
-                println!("Successfully loaded valid Source: {:#?}", s);
+        match get_source() {
+            Ok(source) => {
+                println!("Successfully loaded valid Source: {:#?}", source);
                 assert_eq!(
-                    s.clone()
+                    source
+                        .clone()
                         .download
                         .unwrap()
                         .uri
@@ -333,7 +334,7 @@ mod tests {
                         .to_string(),
                     "download.redis.io"
                 );
-                match s.validate() {
+                match source.validate() {
                     Ok(_) => (),
                     Err(e) => panic!(format!("Valid Source download failed validation: {:?}", e)),
                 }
@@ -344,21 +345,22 @@ mod tests {
 
     #[test]
     fn can_validate_invalid_source_no1() {
-        let f = || -> Result<Source, ConfigError> {
-            let mut s = Config::new();
+        let get_source = || -> Result<Source, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(
+            config.merge(File::from(
                 PathBuf::from("examples").join("invalid_source_download_no1"),
             ))?;
-            println!("merged: {:#?}", s);
+            println!("merged: {:#?}", config);
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => {
-                println!("Successfully loaded invalid Source no1: {:#?}", s);
+        match get_source() {
+            Ok(source) => {
+                println!("Successfully loaded invalid Source no1: {:#?}", source);
                 assert_eq!(
-                    s.clone()
+                    source
+                        .clone()
                         .download
                         .unwrap()
                         .uri
@@ -367,8 +369,8 @@ mod tests {
                         .to_string(),
                     "download.redis.io"
                 );
-                assert_eq!(true, s.clone().download_directory.is_none());
-                match s.validate() {
+                assert_eq!(true, source.clone().download_directory.is_none());
+                match source.validate() {
                     Ok(valid) => panic!(format!(
                         "Invalid Source download is not supposed to pass: {:#?}",
                         valid
@@ -385,21 +387,22 @@ mod tests {
 
     #[test]
     fn can_validate_invalid_source_no2() {
-        let f = || -> Result<Source, ConfigError> {
-            let mut s = Config::new();
+        let get_source = || -> Result<Source, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(
+            config.merge(File::from(
                 PathBuf::from("examples").join("invalid_source_download_no2"),
             ))?;
-            println!("merged: {:#?}", s);
+            println!("merged: {:#?}", config);
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => {
-                println!("Successfully loaded invalid Source 2: {:#?}", s);
+        match get_source() {
+            Ok(source) => {
+                println!("Successfully loaded invalid Source 2: {:#?}", source);
                 assert_eq!(
-                    s.clone()
+                    source
+                        .clone()
                         .download
                         .unwrap()
                         .uri
@@ -408,8 +411,8 @@ mod tests {
                         .to_string(),
                     "download.redis.io"
                 );
-                assert_eq!(true, s.clone().download_directory.is_none());
-                match s.validate() {
+                assert_eq!(true, source.clone().download_directory.is_none());
+                match source.validate() {
                     Ok(valid) => panic!(format!(
                         "Invalid Source download 2 is not supposed to pass: {:#?}",
                         valid
@@ -426,35 +429,35 @@ mod tests {
 
     #[test]
     fn can_read_system_file() {
-        let f = || -> Result<System, ConfigError> {
-            let mut s = Config::new();
+        let get_system = || -> Result<System, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("system")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("system")))?;
+            println!("merged: {:#?}", config);
 
-            match s.get::<Option<Vec<String>>>("apt") {
+            match config.get::<Option<Vec<String>>>("apt") {
                 Ok(tcp) => assert!(tcp.is_some()),
                 Err(e) => panic!(format!("error getting apt from system file: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => println!("Successful system: {:#?}", s),
+        match get_system() {
+            Ok(system) => println!("Successful system: {:#?}", system),
             Err(e) => panic!(format!("Failed to get system configuration: {:?}", e)),
         }
     }
 
     #[test]
     fn can_read_platform_file() {
-        let f = || -> Result<Platform, ConfigError> {
-            let mut s = Config::new();
+        let get_platform = || -> Result<Platform, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("platform")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("platform")))?;
+            println!("merged: {:#?}", config);
 
             let key = "system.apt";
-            match s.get::<Option<Vec<String>>>(key) {
+            match config.get::<Option<Vec<String>>>(key) {
                 Ok(apt) => {
                     println!("{:?}: {:?}", key, apt);
                     assert!(apt.is_some())
@@ -462,53 +465,53 @@ mod tests {
                 Err(e) => panic!(format!("error getting apt from platform file: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => println!("Successful platform: {:#?}", s),
+        match get_platform() {
+            Ok(platform) => println!("Successful platform: {:#?}", platform),
             Err(e) => panic!(format!("Failed to get platform configuration: {:?}", e)),
         }
     }
 
     #[test]
     fn can_read_dependencies_file() {
-        let f = || -> Result<Dependencies, ConfigError> {
-            let mut s = Config::new();
+        let get_dependencies = || -> Result<Dependencies, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("dependencies")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("dependencies")))?;
+            println!("merged: {:#?}", config);
 
-            let key = "platforms.ubuntu.system.apt";
-            match s.get::<Option<Vec<String>>>(key) {
+            const KEY: &'static str = "platforms.ubuntu.system.apt";
+            match config.get::<Option<Vec<String>>>(KEY) {
                 Ok(apt) => {
-                    println!("{:?}: {:?}", key, apt);
+                    println!("{:?}: {:?}", KEY, apt);
                     assert!(apt.is_some())
                 }
                 Err(e) => panic!(format!("error getting apt from dependencies: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => println!("Successful dependencies: {:#?}", s),
+        match get_dependencies() {
+            Ok(dependencies) => println!("Successful dependencies: {:#?}", dependencies),
             Err(e) => panic!(format!("Failed to get dependencies configuration: {:?}", e)),
         }
     }
 
     #[test]
     fn can_read_redis_file() {
-        let f = || -> Result<OffSetup, ConfigError> {
-            let mut s = Config::new();
+        let get_offsetup = || -> Result<OffSetup, ConfigError> {
+            let mut config = Config::default();
 
-            s.merge(File::from(PathBuf::from("examples").join("redis")))?;
-            println!("merged: {:#?}", s);
+            config.merge(File::from(PathBuf::from("examples").join("redis")))?;
+            println!("merged: {:#?}", config);
 
             println!(
                 "redis platforms: {:#?}",
-                s.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
+                config.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
             );
 
-            match s.get::<Platform>("dependencies.platforms.windows") {
+            match config.get::<Platform>("dependencies.platforms.windows") {
                 Ok(windows) => {
                     assert!(windows.arch.is_some());
                     assert_eq!(windows.arch.unwrap(), "x86_64")
@@ -516,18 +519,18 @@ mod tests {
                 Err(e) => panic!(format!("error getting windows platform: {:?}", e)),
             }
 
-            match s.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
+            match config.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
                 Ok(tcp) => assert!(tcp.is_some()),
                 Err(e) => panic!(format!("error getting tcp: {:?}", e)),
             }
 
-            s.try_into()
+            config.try_into()
         };
-        match f() {
-            Ok(s) => {
-                println!("Successful redis: {:#?}", s);
-                assert!(s.dependencies.is_some());
-                assert!(s
+        match get_offsetup() {
+            Ok(offsetup) => {
+                println!("Successful redis: {:#?}", offsetup);
+                assert!(offsetup.dependencies.is_some());
+                assert!(offsetup
                     .dependencies
                     .clone()
                     .unwrap()
@@ -535,7 +538,7 @@ mod tests {
                     .unwrap()
                     .get("windows")
                     .is_some());
-                assert!(s
+                assert!(offsetup
                     .dependencies
                     .unwrap()
                     .platforms
