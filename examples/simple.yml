@@ -51,7 +51,7 @@ dependencies:
       install_prefix: 'C:\opt\bin'
       install_all: true
   applications:
-    postgres:
+    postgresql:
       pkg: https://github.com/offscale/offpostgres
       version: '>9.6.4'
       env: RDBMS_URI

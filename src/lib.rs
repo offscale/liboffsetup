@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate validator_derive;
 
+use std::path::PathBuf;
 use std::{collections::HashMap, env};
 
 use config::{Config, ConfigError, Environment, File};
@@ -196,30 +197,30 @@ impl OffSetup {
         let mut s = Config::new();
 
         // Start off by merging in the "default" configuration file
-        s.merge(File::with_name("config/default"))?;
+        s.merge(File::from(PathBuf::from("config").join("default")))?;
 
         // Add in the current environment file
         // Default to 'development' env
         // Note that this file is _optional_
-        let env = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
-        s.merge(File::with_name(&format!("config/{}", env)).required(false))?;
+        let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
+        s.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
 
         // Add in a local configuration file
         // This file shouldn't be checked in to git
-        s.merge(File::with_name("config/local").required(false))?;
+        s.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
 
         // Add in settings from the environment (with a prefix of APP)
         // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
         s.merge(Environment::with_prefix("app"))?;
 
         // You may also programmatically change settings
-        s.set("database.url", "postgres://")?;
+        s.set("database.url", "postgresql://")?;
 
         // Now that we're done, let's access our configuration
         println!("debug: {:?}", s.get_bool("debug"));
         println!("database: {:?}", s.get::<String>("database.url"));
 
-        // You can deserialize (and thus freeze) the entire configuration as
+        // You can deserialize (and thus freeze) the entire configuration
         s.try_into()
     }
 }
@@ -240,7 +241,7 @@ mod tests {
         let f = || -> Result<Exposes, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/exposes"))?;
+            s.merge(File::from(PathBuf::from("examples").join("exposes")))?;
             println!("merged: {:#?}", s);
 
             match s.get::<Option<Vec<u16>>>("ports.tcp") {
@@ -261,7 +262,7 @@ mod tests {
         let f = || -> Result<OffSetup, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/simple"))?;
+            s.merge(File::from(PathBuf::from("examples").join("simple")))?;
             println!("merged: {:#?}", s);
 
             match s.get::<Option<Vec<u16>>>("exposes.ports.tcp") {
@@ -285,7 +286,7 @@ mod tests {
         let f = || -> Result<Source, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/source"))?;
+            s.merge(File::from(PathBuf::from("examples").join("source")))?;
             println!("merged: {:#?}", s);
 
             match s.get::<Option<Download>>("download") {
@@ -312,7 +313,9 @@ mod tests {
         let f = || -> Result<Source, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/valid_source_download"))?;
+            s.merge(File::from(
+                PathBuf::from("examples").join("valid_source_download"),
+            ))?;
             println!("merged: {:#?}", s);
 
             s.try_into()
@@ -344,7 +347,9 @@ mod tests {
         let f = || -> Result<Source, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/invalid_source_download_no1"))?;
+            s.merge(File::from(
+                PathBuf::from("examples").join("invalid_source_download_no1"),
+            ))?;
             println!("merged: {:#?}", s);
 
             s.try_into()
@@ -383,7 +388,9 @@ mod tests {
         let f = || -> Result<Source, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/invalid_source_download_no2"))?;
+            s.merge(File::from(
+                PathBuf::from("examples").join("invalid_source_download_no2"),
+            ))?;
             println!("merged: {:#?}", s);
 
             s.try_into()
@@ -422,7 +429,7 @@ mod tests {
         let f = || -> Result<System, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/system"))?;
+            s.merge(File::from(PathBuf::from("examples").join("system")))?;
             println!("merged: {:#?}", s);
 
             match s.get::<Option<Vec<String>>>("apt") {
@@ -443,7 +450,7 @@ mod tests {
         let f = || -> Result<Platform, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/platform"))?;
+            s.merge(File::from(PathBuf::from("examples").join("platform")))?;
             println!("merged: {:#?}", s);
 
             let key = "system.apt";
@@ -468,7 +475,7 @@ mod tests {
         let f = || -> Result<Dependencies, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/dependencies"))?;
+            s.merge(File::from(PathBuf::from("examples").join("dependencies")))?;
             println!("merged: {:#?}", s);
 
             let key = "platforms.ubuntu.system.apt";
@@ -493,7 +500,7 @@ mod tests {
         let f = || -> Result<OffSetup, ConfigError> {
             let mut s = Config::new();
 
-            s.merge(File::with_name("examples/redis"))?;
+            s.merge(File::from(PathBuf::from("examples").join("redis")))?;
             println!("merged: {:#?}", s);
 
             println!(
