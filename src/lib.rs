@@ -1,34 +1,13 @@
-#![feature(custom_attribute)]
-
 #[macro_use]
 extern crate validator_derive;
 
-use std::{collections::HashMap, env, str::FromStr, string::ParseError};
+use std::{collections::HashMap, env};
 
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 use urlparse::{urlparse, Url};
 use validator::{Validate, ValidationError};
-
-#[derive(Debug, Deserialize)]
-struct VecOfU16 {
-    data: Vec<u16>,
-}
-
-impl FromStr for VecOfU16 {
-    type Err = ParseError;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        Ok(Self {
-            data: input
-                .trim()
-                .split(',')
-                .map(|s| s.parse().unwrap())
-                .collect(),
-        })
-    }
-}
 
 // Since structopt/clap does not support config file, only cli and env, we split the two between
 // 1) config for file and environment
@@ -222,7 +201,7 @@ impl OffSetup {
         // Add in the current environment file
         // Default to 'development' env
         // Note that this file is _optional_
-        let env = env::var("RUN_MODE").unwrap_or("development".into());
+        let env = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
         s.merge(File::with_name(&format!("config/{}", env)).required(false))?;
 
         // Add in a local configuration file

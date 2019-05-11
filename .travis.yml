@@ -1,0 +1,56 @@
+language: rust
+
+# only cache cargo subcommand binaries and .so libs
+# the build artifacts take a lot of space and are slower to
+# cache than to actually rebuild anyway...
+# We need to cache the whole .cargo directory to keep the
+# .crates.toml file.
+cache:
+  directories:
+    - /home/travis/install
+    - /home/travis/.cargo
+
+# But don't cache the cargo registry
+before_cache:
+  - rm -rf /home/travis/.cargo/registry
+
+dist: trusty
+
+sudo: false
+
+rust:
+  - stable
+#  - beta
+#  - latest
+
+matrix:
+  include:
+    - rust: stable
+      env: BUILD_FMT=1
+    - rust: stable
+      env: CLIPPY=1
+
+before_script:
+  - export PATH=$HOME/.cargo/bin:$PATH
+  - mkdir $(pwd)/socket
+  - export XDG_RUNTIME_DIR="$(pwd)/socket"
+  - cargo fetch
+  - |
+      rustup component add rustfmt-preview
+      if [ -n "$CLIPPY" ]; then
+        rustup component add clippy
+      fi
+os:
+  - linux
+script:
+  - |
+      if [ -n "$BUILD_FMT" ]; then
+        cargo fmt --all -- --check
+        rustfmt --check src/*.rs
+      elif [ -n "$CLIPPY" ]; then
+        cargo clippy --all -- -D warnings \
+          -A clippy::deprecated_cfg_attr \
+          -A clippy::for_loop_over_option
+      else
+        cargo test --all --features "$FEATURES"
+      fi

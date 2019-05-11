@@ -1,5 +1,6 @@
 liboffsetup
 ===========
+[![Build Status](https://travis-ci.org/offscale/liboffsetup.svg?branch=master)](https://travis-ci.org/offscale/liboffsetup)
 
 Offsetup bootstraps nodes. Unwraps Docker.
 Cross-platform focus: Windows, Linux and macOS.
