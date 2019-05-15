@@ -2,7 +2,7 @@
 extern crate validator_derive;
 
 use std::path::PathBuf;
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, string::ParseError};
 
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Deserializer};
@@ -20,10 +20,30 @@ pub struct OffSetup {
 
     dependencies: Option<Dependencies>,
     exposes: Option<Exposes>,
+
+    debug: Option<bool>,
 }
 
-#[derive(StructOpt, Debug, Deserialize)]
-#[structopt(name = "offsetup")]
+impl OffSetupCli {
+    pub fn run() -> (OffSetupCli, OffSetup) {
+        let args: OffSetupCli = OffSetupCli::from_args();
+        let config = OffSetup::with_cli(args.clone());
+        match config {
+            Ok(c) => (args, c),
+            Err(e) => panic!("Failed to load configuration file: {:#?}", e),
+        }
+    }
+}
+
+fn parse_string_list(input: &str) -> Result<Vec<String>, ParseError> {
+    Ok(input.trim().split(',').map(|s| s.to_owned()).collect())
+}
+
+#[derive(Clone, StructOpt, Debug, Deserialize)]
+#[structopt(
+    name = "offsetup",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 pub struct OffSetupCli {
     /// Activate debug mode
     #[structopt(short = "d", long = "debug", env = "OFFSETUP_DEBUG")]
@@ -38,6 +58,69 @@ pub struct OffSetupCli {
         env = "OFFSETUP_VERBOSITY"
     )]
     verbose: u8,
+
+    /// Set install priority, override config specified if any
+    #[structopt(
+        short = "ip",
+        long = "install-priority",
+        parse(try_from_str = "parse_string_list"),
+        help = "Comma separated list of priorities, will take precedence over whatever is in the the config file"
+    )]
+    install_priority: Option<Vec<String>>,
+
+    #[structopt(
+        short = "c",
+        default_value = "offsetup.yml",
+        raw(visible_aliases = r#"&["--config", "--configuration"]"#),
+        help = "Specify configuration file"
+    )]
+    config_file: String,
+
+    #[structopt(subcommand)]
+    cmd: Command,
+}
+
+#[derive(Clone, StructOpt, Debug, Deserialize)]
+enum Command {
+    #[structopt(
+        name = "new",
+        raw(visible_aliases = r#"&["--new","init","--init"]"#),
+        help = "Generate basic config file based on environment"
+    )]
+    Init,
+
+    #[structopt(
+        name = "install",
+        raw(visible_aliases = r#"&["-i","--install"]"#),
+        help = "Install the project, and all its dependencies"
+    )]
+    Install,
+
+    #[structopt(
+        name = "uninstall",
+        raw(visible_aliases = r#"&["--uninstall","rm","--rm","remove","--remove"]"#),
+        help = "Remove the project. Use --remove-shared to also remove the shared dependencies (eg: cmake)"
+    )]
+    Uninstall {
+        #[structopt(long = "remove-shared")]
+        remove_shared: bool,
+    },
+
+    // start, run, up
+    #[structopt(
+        name = "start",
+        raw(visible_aliases = r#"&["--start","up","--up","run","--run"]"#),
+        help = "Runs the project. Will inform user to run install [manually] if any of the dependencies aren't met"
+    )]
+    Start,
+
+    // stop, down
+    #[structopt(
+        name = "stop",
+        raw(visible_aliases = r#"&["--stop","down","--down"]"#),
+        help = "Stops the project. Will have a nonzero exit code and a warning message if it's not started"
+    )]
+    Stop,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -192,13 +275,50 @@ enum Exposes {
     },
 }
 
+impl OffSetup {
+    fn with_cli(cli: OffSetupCli) -> Result<Self, ConfigError> {
+        let mut config = Config::new();
+
+        println!(
+            "loading configuration from file: {:?}",
+            cli.config_file.clone()
+        );
+        config.merge(File::from(PathBuf::from(cli.config_file)))?;
+
+        println!("loading configuration from environment");
+        config.merge(Environment::with_prefix("OFFSETUP"))?;
+
+        if cli.install_priority.is_some() {
+            let priorities = cli.install_priority.unwrap();
+            println!("overriding install priorities to: {:?}", &priorities);
+
+            if let Ok(Some(platforms)) =
+                config.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
+            {
+                for (name, _platform) in &platforms {
+                    let path = format!("dependencies.platforms.{}.install_priority", name);
+
+                    println!("setting {:?} to {:?}", path, &priorities);
+                    config.set(&path, priorities.clone())?;
+                }
+            }
+        }
+
+        config.set("debug", Some(cli.debug))?;
+
+        println!("configuration loaded");
+
+        config.try_into()
+    }
+}
+
 impl Default for OffSetup {
     fn default() -> Self {
         const DEFAULT: fn() -> Result<OffSetup, ConfigError> = || {
             let mut config = Config::new();
 
             // Start off by merging in the "default" configuration file
-            config.merge(File::from(PathBuf::from("config").join("default")))?;
+            config.merge(File::from(PathBuf::from("offsetup.yml")))?;
 
             // Add in the current environment file
             // Default to 'development' env
@@ -206,20 +326,12 @@ impl Default for OffSetup {
             let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
             config.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
 
-            // Add in a local configuration file
-            // This file shouldn't be checked in to git
-            config.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
-
-            // Add in settings from the environment (with a prefix of APP)
-            // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-            config.merge(Environment::with_prefix("app"))?;
-
-            // You may also programmatically change settings
-            config.set("database.url", "postgresql://")?;
+            // Add in settings from the environment (with a prefix of OFFSETUP)
+            // Eg.. `OFFSETUP_DEBUG=1 ./target/app` would set the `debug` key
+            config.merge(Environment::with_prefix("OFFSETUP"))?;
 
             // Now that we're done, let's access our configuration
             println!("debug: {:?}", config.get_bool("debug"));
-            println!("database: {:?}", config.get::<String>("database.url"));
 
             // You can deserialize (and thus freeze) the entire configuration
             config.try_into()
@@ -234,8 +346,9 @@ mod tests {
 
     #[test]
     fn can_use_cli() {
-        let args = OffSetupCli::from_args();
-        println!("{:?}", args);
+        let (args, config) = OffSetupCli::run();
+        println!("args: {:?}", args);
+        println!("config: {:#?}", config);
     }
 
     #[test]
