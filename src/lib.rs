@@ -2,7 +2,11 @@
 extern crate validator_derive;
 
 use std::path::PathBuf;
-use std::{collections::HashMap, env, string::ParseError};
+use std::{
+    collections::HashMap,
+    env,
+    string::{ParseError, ToString},
+};
 
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Deserializer};
@@ -36,7 +40,7 @@ impl OffSetupCli {
 }
 
 fn parse_string_list(input: &str) -> Result<Vec<String>, ParseError> {
-    Ok(input.trim().split(',').map(|s| s.to_string()).collect())
+    Ok(input.trim().split(',').map(ToString::to_string).collect())
 }
 
 #[derive(Clone, StructOpt, Debug, Deserialize)]
