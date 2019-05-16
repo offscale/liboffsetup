@@ -36,7 +36,7 @@ impl OffSetupCli {
 }
 
 fn parse_string_list(input: &str) -> Result<Vec<String>, ParseError> {
-    Ok(input.trim().split(',').map(|s| s.to_owned()).collect())
+    Ok(input.trim().split(',').map(|s| s.to_string()).collect())
 }
 
 #[derive(Clone, StructOpt, Debug, Deserialize)]
@@ -295,7 +295,7 @@ impl OffSetup {
             if let Ok(Some(platforms)) =
                 config.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
             {
-                for (name, _platform) in &platforms {
+                for name in platforms.keys() {
                     let path = format!("dependencies.platforms.{}.install_priority", name);
 
                     println!("setting {:?} to {:?}", path, &priorities);
