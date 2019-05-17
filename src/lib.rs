@@ -26,12 +26,13 @@ pub struct OffSetup {
     exposes: Option<Exposes>,
 
     debug: Option<bool>,
+    dry_run: Option<bool>,
 }
 
 impl OffSetupCli {
     fn process_command(cli: OffSetupCli, config: OffSetup) -> (OffSetupCli, OffSetup) {
         match cli.clone().cmd {
-            Command::Init => OffSetupCli::run_new_command(),
+            Command::Init => OffSetupCli::run_new_command(&config),
             Command::Install => OffSetupCli::run_install_command(&config),
             Command::Uninstall { remove_shared } => {
                 OffSetupCli::run_uninstall_command(&config, remove_shared)
@@ -52,24 +53,54 @@ impl OffSetupCli {
     }
 
     /// Generate basic config based on environment and save to current directory in offsetup.yml
-    fn run_new_command() {
-        unimplemented!()
+    fn run_new_command(config: &OffSetup) {
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: output to offsetup.yml");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
     }
 
     fn run_install_command(config: &OffSetup) {
-        unimplemented!()
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be installed");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
     }
 
     fn run_uninstall_command(config: &OffSetup, remove_shared: bool) {
-        unimplemented!()
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be removed");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
     }
 
     fn run_start_command(config: &OffSetup) {
-        unimplemented!()
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be started");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
     }
 
     fn run_stop_command(config: &OffSetup) {
-        unimplemented!()
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be stopped");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -86,6 +117,13 @@ pub struct OffSetupCli {
     /// Activate debug mode
     #[structopt(short = "d", long = "debug", env = "OFFSETUP_DEBUG")]
     debug: bool,
+
+    /// Dry run without actually doing anything
+    #[structopt(
+        long = "dry-run",
+        help = "Process given command and show what would be done without altering anything"
+    )]
+    dry_run: bool,
 
     // The number of occurrences of the `v/verbose` flag
     /// Verbose mode (-v, -vv, -vvv, etc.)
@@ -343,6 +381,7 @@ impl OffSetup {
         }
 
         config.set("debug", Some(cli.debug))?;
+        config.set("dry_run", Some(cli.dry_run))?;
 
         println!("configuration loaded");
 
