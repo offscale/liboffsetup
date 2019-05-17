@@ -29,13 +29,47 @@ pub struct OffSetup {
 }
 
 impl OffSetupCli {
+    fn process_command(cli: OffSetupCli, config: OffSetup) -> (OffSetupCli, OffSetup) {
+        match cli.clone().cmd {
+            Command::Init => OffSetupCli::run_new_command(),
+            Command::Install => OffSetupCli::run_install_command(&config),
+            Command::Uninstall { remove_shared } => {
+                OffSetupCli::run_uninstall_command(&config, remove_shared)
+            }
+            Command::Start => OffSetupCli::run_start_command(&config),
+            Command::Stop => OffSetupCli::run_stop_command(&config),
+        }
+        (cli, config)
+    }
+
     pub fn run() -> (OffSetupCli, OffSetup) {
         let args: OffSetupCli = OffSetupCli::from_args();
         let config = OffSetup::with_cli(args.clone());
         match config {
-            Ok(c) => (args, c),
+            Ok(c) => OffSetupCli::process_command(args, c),
             Err(e) => panic!("Failed to load configuration file: {:#?}", e),
         }
+    }
+
+    /// Generate basic config based on environment and save to current directory in offsetup.yml
+    fn run_new_command() {
+        unimplemented!()
+    }
+
+    fn run_install_command(config: &OffSetup) {
+        unimplemented!()
+    }
+
+    fn run_uninstall_command(config: &OffSetup, remove_shared: bool) {
+        unimplemented!()
+    }
+
+    fn run_start_command(config: &OffSetup) {
+        unimplemented!()
+    }
+
+    fn run_stop_command(config: &OffSetup) {
+        unimplemented!()
     }
 }
 
@@ -349,13 +383,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_use_cli() {
-        let (args, config) = OffSetupCli::run();
-        println!("args: {:?}", args);
-        println!("config: {:#?}", config);
-    }
-
-    #[test]
     fn can_read_simple_ports() {
         println!("testing ports...");
         let get_exposes = || -> Result<Exposes, ConfigError> {
@@ -407,7 +434,7 @@ mod tests {
             println!("merged: {:#?}", config);
 
             match config.get::<Option<Download>>("download") {
-                Ok(download) => assert!(download.is_some()),
+                Ok(download) => assert!(download.is_some(), "couldn't get download"),
                 Err(e) => panic!(format!("error getting download from Source file: {:?}", e)),
             }
 
@@ -484,7 +511,7 @@ mod tests {
                         .to_string(),
                     "download.redis.io"
                 );
-                assert_eq!(true, source.clone().download_directory.is_none());
+                assert_eq!(true, source.clone().download_directory.is_none(), "shouldn't find directory");
                 match source.validate() {
                     Ok(valid) => panic!(format!(
                         "Invalid Source download is not supposed to pass: {:#?}",
