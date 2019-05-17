@@ -8,7 +8,7 @@ use std::{
     string::{ParseError, ToString},
 };
 
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, Environment, File, FileFormat};
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 use urlparse::{urlparse, Url};
@@ -109,7 +109,7 @@ pub struct OffSetupCli {
     #[structopt(
         short = "c",
         default_value = "offsetup.yml",
-        raw(visible_aliases = r#"&["--config", "--configuration"]"#),
+        raw(visible_aliases = r#"&["config", "configuration"]"#),
         help = "Specify configuration file"
     )]
     config_file: String,
@@ -321,7 +321,7 @@ impl OffSetup {
             "loading configuration from file: {:?}",
             cli.config_file.clone()
         );
-        config.merge(File::from(PathBuf::from(cli.config_file)))?;
+        config.merge(File::new(&cli.config_file, FileFormat::Yaml))?;
 
         println!("loading configuration from environment");
         config.merge(Environment::with_prefix("OFFSETUP"))?;
@@ -511,7 +511,11 @@ mod tests {
                         .to_string(),
                     "download.redis.io"
                 );
-                assert_eq!(true, source.clone().download_directory.is_none(), "shouldn't find directory");
+                assert_eq!(
+                    true,
+                    source.clone().download_directory.is_none(),
+                    "shouldn't find directory"
+                );
                 match source.validate() {
                     Ok(valid) => panic!(format!(
                         "Invalid Source download is not supposed to pass: {:#?}",
