@@ -2,9 +2,13 @@
 extern crate validator_derive;
 
 use std::path::PathBuf;
-use std::{collections::HashMap, env};
+use std::{
+    collections::HashMap,
+    env,
+    string::{ParseError, ToString},
+};
 
-use config::{Config, ConfigError, Environment, File};
+use config::{Config, ConfigError, Environment, File, FileFormat};
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 use urlparse::{urlparse, Url};
@@ -20,14 +24,106 @@ pub struct OffSetup {
 
     dependencies: Option<Dependencies>,
     exposes: Option<Exposes>,
+
+    debug: Option<bool>,
+    dry_run: Option<bool>,
 }
 
-#[derive(StructOpt, Debug, Deserialize)]
-#[structopt(name = "offsetup")]
+impl OffSetupCli {
+    fn process_command(cli: OffSetupCli, config: OffSetup) -> (OffSetupCli, OffSetup) {
+        match cli.clone().cmd {
+            Command::Init => OffSetupCli::run_new_command(&config),
+            Command::Install => OffSetupCli::run_install_command(&config),
+            Command::Uninstall { remove_shared } => {
+                OffSetupCli::run_uninstall_command(&config, remove_shared)
+            }
+            Command::Start => OffSetupCli::run_start_command(&config),
+            Command::Stop => OffSetupCli::run_stop_command(&config),
+        }
+        (cli, config)
+    }
+
+    pub fn run() -> (OffSetupCli, OffSetup) {
+        let args: OffSetupCli = OffSetupCli::from_args();
+        let config = OffSetup::with_cli(args.clone());
+        match config {
+            Ok(c) => OffSetupCli::process_command(args, c),
+            Err(e) => panic!("Failed to load configuration file: {:#?}", e),
+        }
+    }
+
+    /// Generate basic config based on environment and save to current directory in offsetup.yml
+    fn run_new_command(config: &OffSetup) {
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: output to offsetup.yml");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn run_install_command(config: &OffSetup) {
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be installed");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn run_uninstall_command(config: &OffSetup, remove_shared: bool) {
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be removed");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn run_start_command(config: &OffSetup) {
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be started");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn run_stop_command(config: &OffSetup) {
+        match config.dry_run {
+            Some(true) => {
+                println!("DRY-RUN: what would be stopped");
+                println!("...");
+            }
+            _ => unimplemented!(),
+        }
+    }
+}
+
+fn parse_string_list(input: &str) -> Result<Vec<String>, ParseError> {
+    Ok(input.trim().split(',').map(ToString::to_string).collect())
+}
+
+#[derive(Clone, StructOpt, Debug, Deserialize)]
+#[structopt(
+    name = "offsetup",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 pub struct OffSetupCli {
     /// Activate debug mode
     #[structopt(short = "d", long = "debug", env = "OFFSETUP_DEBUG")]
     debug: bool,
+
+    /// Dry run without actually doing anything
+    #[structopt(
+        long = "dry-run",
+        help = "Process given command and show what would be done without altering anything"
+    )]
+    dry_run: bool,
 
     // The number of occurrences of the `v/verbose` flag
     /// Verbose mode (-v, -vv, -vvv, etc.)
@@ -38,6 +134,69 @@ pub struct OffSetupCli {
         env = "OFFSETUP_VERBOSITY"
     )]
     verbose: u8,
+
+    /// Set install priority, override config specified if any
+    #[structopt(
+        short = "ip",
+        long = "install-priority",
+        parse(try_from_str = "parse_string_list"),
+        help = "Comma separated list of priorities, will take precedence over whatever is in the the config file"
+    )]
+    install_priority: Option<Vec<String>>,
+
+    #[structopt(
+        short = "c",
+        default_value = "offsetup.yml",
+        raw(visible_aliases = r#"&["config", "configuration"]"#),
+        help = "Specify configuration file"
+    )]
+    config_file: String,
+
+    #[structopt(subcommand)]
+    cmd: Command,
+}
+
+#[derive(Clone, StructOpt, Debug, Deserialize)]
+enum Command {
+    #[structopt(
+        name = "new",
+        raw(visible_aliases = r#"&["--new","init","--init"]"#),
+        help = "Generate basic config file based on environment"
+    )]
+    Init,
+
+    #[structopt(
+        name = "install",
+        raw(visible_aliases = r#"&["-i","--install"]"#),
+        help = "Install the project, and all its dependencies"
+    )]
+    Install,
+
+    #[structopt(
+        name = "uninstall",
+        raw(visible_aliases = r#"&["--uninstall","rm","--rm","remove","--remove"]"#),
+        help = "Remove the project. Use --remove-shared to also remove the shared dependencies (eg: cmake)"
+    )]
+    Uninstall {
+        #[structopt(long = "remove-shared")]
+        remove_shared: bool,
+    },
+
+    // start, run, up
+    #[structopt(
+        name = "start",
+        raw(visible_aliases = r#"&["--start","up","--up","run","--run"]"#),
+        help = "Runs the project. Will inform user to run install [manually] if any of the dependencies aren't met"
+    )]
+    Start,
+
+    // stop, down
+    #[structopt(
+        name = "stop",
+        raw(visible_aliases = r#"&["--stop","down","--down"]"#),
+        help = "Stops the project. Will have a nonzero exit code and a warning message if it's not started"
+    )]
+    Stop,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -192,13 +351,51 @@ enum Exposes {
     },
 }
 
+impl OffSetup {
+    fn with_cli(cli: OffSetupCli) -> Result<Self, ConfigError> {
+        let mut config = Config::new();
+
+        println!(
+            "loading configuration from file: {:?}",
+            cli.config_file.clone()
+        );
+        config.merge(File::new(&cli.config_file, FileFormat::Yaml))?;
+
+        println!("loading configuration from environment");
+        config.merge(Environment::with_prefix("OFFSETUP"))?;
+
+        if cli.install_priority.is_some() {
+            let priorities = cli.install_priority.unwrap();
+            println!("overriding install priorities to: {:?}", &priorities);
+
+            if let Ok(Some(platforms)) =
+                config.get::<Option<HashMap<String, Platform>>>("dependencies.platforms")
+            {
+                for name in platforms.keys() {
+                    let path = format!("dependencies.platforms.{}.install_priority", name);
+
+                    println!("setting {:?} to {:?}", path, &priorities);
+                    config.set(&path, priorities.clone())?;
+                }
+            }
+        }
+
+        config.set("debug", Some(cli.debug))?;
+        config.set("dry_run", Some(cli.dry_run))?;
+
+        println!("configuration loaded");
+
+        config.try_into()
+    }
+}
+
 impl Default for OffSetup {
     fn default() -> Self {
         const DEFAULT: fn() -> Result<OffSetup, ConfigError> = || {
             let mut config = Config::new();
 
             // Start off by merging in the "default" configuration file
-            config.merge(File::from(PathBuf::from("config").join("default")))?;
+            config.merge(File::from(PathBuf::from("offsetup.yml")))?;
 
             // Add in the current environment file
             // Default to 'development' env
@@ -206,20 +403,12 @@ impl Default for OffSetup {
             let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
             config.merge(File::from(PathBuf::from("config").join(run_mode)).required(false))?;
 
-            // Add in a local configuration file
-            // This file shouldn't be checked in to git
-            config.merge(File::from(PathBuf::from("config").join("local")).required(false))?;
-
-            // Add in settings from the environment (with a prefix of APP)
-            // Eg.. `APP_DEBUG=1 ./target/app` would set the `debug` key
-            config.merge(Environment::with_prefix("app"))?;
-
-            // You may also programmatically change settings
-            config.set("database.url", "postgresql://")?;
+            // Add in settings from the environment (with a prefix of OFFSETUP)
+            // Eg.. `OFFSETUP_DEBUG=1 ./target/app` would set the `debug` key
+            config.merge(Environment::with_prefix("OFFSETUP"))?;
 
             // Now that we're done, let's access our configuration
             println!("debug: {:?}", config.get_bool("debug"));
-            println!("database: {:?}", config.get::<String>("database.url"));
 
             // You can deserialize (and thus freeze) the entire configuration
             config.try_into()
@@ -231,12 +420,6 @@ impl Default for OffSetup {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn can_use_cli() {
-        let args = OffSetupCli::from_args();
-        println!("{:?}", args);
-    }
 
     #[test]
     fn can_read_simple_ports() {
@@ -290,7 +473,7 @@ mod tests {
             println!("merged: {:#?}", config);
 
             match config.get::<Option<Download>>("download") {
-                Ok(download) => assert!(download.is_some()),
+                Ok(download) => assert!(download.is_some(), "couldn't get download"),
                 Err(e) => panic!(format!("error getting download from Source file: {:?}", e)),
             }
 
@@ -367,7 +550,11 @@ mod tests {
                         .to_string(),
                     "download.redis.io"
                 );
-                assert_eq!(true, source.clone().download_directory.is_none());
+                assert_eq!(
+                    true,
+                    source.clone().download_directory.is_none(),
+                    "shouldn't find directory"
+                );
                 match source.validate() {
                     Ok(valid) => panic!(format!(
                         "Invalid Source download is not supposed to pass: {:#?}",
