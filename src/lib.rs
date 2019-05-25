@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate validator_derive;
 
+mod scanning;
+
 use std::path::PathBuf;
 use std::{
     collections::HashMap,
