@@ -1,8 +1,15 @@
+#[cfg(windows)]
+#[path = "windows/mod.rs"]
+mod windows;
+
 use core::borrow::Borrow;
 use std::fs;
 
 use itertools::Itertools;
+use std::process::Command;
 use walkdir::{DirEntry, WalkDir};
+
+use crate::scanning::platform_version;
 
 /// PlatformScanner retrieves information based on what platform the binary is running on.
 /// It is meant to be used for
@@ -10,8 +17,7 @@ use walkdir::{DirEntry, WalkDir};
 /// 2) validating the system matches what is expected when applying a configuration to it
 pub struct PlatformScanner;
 
-type PlatformBuild = String;
-type Version = String;
+pub type PlatformVersionAliases = Vec<String>;
 
 impl PlatformScanner {
     /// search given directory for specific language dependencies ie LangDependencyName
@@ -46,7 +52,7 @@ impl PlatformScanner {
         }
     }
 
-    fn _get_unix_platform_info() -> (PlatformName, Version) {
+    fn _get_unix_platform_info() -> (PlatformName, PlatformVersionAliases) {
         let os = os_type::current_platform();
         let name = match os.os_type {
             os_type::OSType::Arch => PlatformName::Arch,
@@ -58,11 +64,12 @@ impl PlatformScanner {
             os_type::OSType::Ubuntu => PlatformName::Ubuntu,
             os_type::OSType::Unknown | _ => PlatformName::Unknown,
         };
-        (name, os.version)
+        (name, vec![os.version])
     }
 
-    fn _get_windows_platform_info() -> (PlatformName, Version, PlatformBuild) {
-        (PlatformName::Windows, "0.0.0".into(), "0".into())
+    fn _get_windows_platform_info() -> (PlatformName, PlatformVersionAliases) {
+        let versions = platform_version::get_platform_version();
+        (PlatformName::Windows, versions)
     }
 
     fn _get_architecture() -> Architecture {
@@ -74,19 +81,17 @@ impl PlatformScanner {
         let mut p = Platform {
             arch: PlatformScanner::_get_architecture(),
             name: PlatformName::Unknown,
-            version: "".into(),
-            short_version: "".into(),
+            versions: vec![],
         };
 
         if cfg!(windows) {
-            let (name, version, short_version) = PlatformScanner::_get_windows_platform_info();
+            let (name, version) = PlatformScanner::_get_windows_platform_info();
             p.name = name;
-            p.version = version;
-            p.short_version = short_version;
+            p.versions = version;
         } else {
             let (name, version) = PlatformScanner::_get_unix_platform_info();
             p.name = name;
-            p.version = version;
+            p.versions = version;
         }
 
         return p;
@@ -131,13 +136,12 @@ pub enum Architecture {
 pub struct Platform {
     arch: Architecture,
     name: PlatformName,
-    short_version: String,
-    version: String,
+    versions: PlatformVersionAliases,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::scanning::*;
+    use crate::scanning::platform::*;
 
     #[test]
     fn list_go_dependencies() {

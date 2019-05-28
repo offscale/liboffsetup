@@ -8,10 +8,22 @@ license = "Apache-2.0"
 [dependencies]
 config = "0.9.3"
 itertools = "0.8"
-os_type="2.2"
+os_type = "2.2"
 structopt = "0.2.15"
 serde = { version = "1.0.91", features = ["derive"] }
 urlparse = "0.7.3"
 validator = "0.8.0"
 validator_derive = "0.8.0"
 walkdir = "2.2"
+
+[target."cfg(windows)".dependencies.kernel32-sys]
+version = "0.2"
+
+[target."cfg(windows)".dependencies.user32-sys]
+version = "0.2"
+
+[target."cfg(windows)".dependencies.winapi]
+version = "0.2"
+
+[target."cfg(windows)".dependencies.winreg]
+version = "0.6"
