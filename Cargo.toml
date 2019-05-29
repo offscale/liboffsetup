@@ -16,14 +16,8 @@ validator = "0.8.0"
 validator_derive = "0.8.0"
 walkdir = "2.2"
 
-[target."cfg(windows)".dependencies.kernel32-sys]
-version = "0.2"
-
-[target."cfg(windows)".dependencies.user32-sys]
-version = "0.2"
-
-[target."cfg(windows)".dependencies.winapi]
-version = "0.2"
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["sysinfoapi","winuser"] }
 
 [target."cfg(windows)".dependencies.winreg]
 version = "0.6"

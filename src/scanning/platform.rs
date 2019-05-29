@@ -1,15 +1,9 @@
-#[cfg(windows)]
-#[path = "windows/mod.rs"]
-mod windows;
-
 use core::borrow::Borrow;
-use std::fs;
 
 use itertools::Itertools;
-use std::process::Command;
-use walkdir::{DirEntry, WalkDir};
+use walkdir::WalkDir;
 
-use crate::scanning::platform_version;
+use crate::scanning::os;
 
 /// PlatformScanner retrieves information based on what platform the binary is running on.
 /// It is meant to be used for
@@ -68,7 +62,7 @@ impl PlatformScanner {
     }
 
     fn _get_windows_platform_info() -> (PlatformName, PlatformVersionAliases) {
-        let versions = platform_version::get_platform_version();
+        let versions = os::get_platform_version();
         (PlatformName::Windows, versions)
     }
 

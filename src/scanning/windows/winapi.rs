@@ -2,18 +2,19 @@
 
 use std::mem;
 
-use kernel32::GetSystemInfo;
-use user32::GetSystemMetrics;
+use winapi::shared::{minwindef::DWORD, ntdef::NTSTATUS, ntstatus::STATUS_SUCCESS};
 #[cfg(target_arch = "x86")]
-use winapi::winnt::OSVERSIONINFOEXA;
+#[allow(unused_imports)]
+use winapi::um::winnt::OSVERSIONINFOEXA;
 #[cfg(not(target_arch = "x86"))]
-use winapi::winnt::OSVERSIONINFOEXW;
-use winapi::{
-    minwindef::DWORD, ntdef::NTSTATUS, ntstatus::STATUS_SUCCESS, sysinfoapi::SYSTEM_INFO,
+#[allow(unused_imports)]
+use winapi::um::winnt::OSVERSIONINFOEXW;
+use winapi::um::{
+    sysinfoapi::GetSystemInfo, sysinfoapi::SYSTEM_INFO, winuser::GetSystemMetrics,
     winuser::SM_SERVERR2,
 };
 
-use crate::scanning::platform::{windows::registry, PlatformVersionAliases};
+use crate::scanning::{os::get_release_id, platform::PlatformVersionAliases};
 
 #[cfg(target_arch = "x86")]
 type OSVERSIONINFOEX = OSVERSIONINFOEXA;
@@ -44,7 +45,7 @@ pub fn get_platform_version() -> PlatformVersionAliases {
         Some(val) => val,
     };
 
-    match (get_product_name(&version_info), registry::get_release_id()) {
+    match (get_product_name(&version_info), get_release_id()) {
         (Some(name), Some(id)) => vec![
             name.into(),
             version_info.dwBuildNumber.to_string(),
@@ -103,7 +104,7 @@ fn get_product_name(version_info: &OSVERSIONINFOEX) -> Option<String> {
             if version_info.wSuiteMask & VER_SUITE_WH_SERVER == VER_SUITE_WH_SERVER {
                 Some("Windows Home Server")
             } else if version_info.wProductType == VER_NT_WORKSTATION
-                && info.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64
+                && unsafe { info.u.s().wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 }
             {
                 Some("Windows XP Professional x64 Edition")
             } else {
