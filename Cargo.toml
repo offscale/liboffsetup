@@ -8,6 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 config = "0.9.3"
 itertools = "0.8"
+lazy_static = "1.3"
 os_type = "2.2"
 structopt = "0.2.15"
 serde = { version = "1.0.91", features = ["derive"] }
@@ -18,6 +19,3 @@ walkdir = "2.2"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["sysinfoapi","winuser"] }
-
-[target."cfg(windows)".dependencies.winreg]
-version = "0.6"

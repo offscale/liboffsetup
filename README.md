@@ -34,6 +34,10 @@ $ cargo test
 $ cargo make
 ```
 
+### Notes for Windows
+Only tested/compiled with nightly-x86_64-pc-windows-msvc so far. Under msys2, nightly-x86_64-pc-windows-gnu does not link
+with the error: `ld: cannot find -lntdll` 
+
 ## License
 
 Licensed under either of

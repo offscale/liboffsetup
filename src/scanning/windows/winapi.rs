@@ -45,7 +45,11 @@ pub fn get_platform_version() -> PlatformVersionAliases {
         Some(val) => val,
     };
 
-    match (get_product_name(&version_info), get_release_id()) {
+    let build_number = version_info.dwBuildNumber as u64;
+    match (
+        get_product_name(&version_info),
+        get_release_id(&build_number),
+    ) {
         (Some(name), Some(id)) => vec![
             name.into(),
             version_info.dwBuildNumber.to_string(),
@@ -54,9 +58,7 @@ pub fn get_platform_version() -> PlatformVersionAliases {
         (Some(name), None) => vec![name.into(), version_info.dwBuildNumber.to_string()],
         (None, _) => panic!(
             "unknown Windows version: {:?}.{:?}.{:?}",
-            version_info.dwMajorVersion as u64,
-            version_info.dwMinorVersion as u64,
-            version_info.dwBuildNumber as u64
+            version_info.dwMajorVersion as u64, version_info.dwMinorVersion as u64, build_number,
         ),
     }
 }
@@ -121,13 +123,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn version_info() {
+    fn can_get_platform_version() {
+        let versions = get_platform_version();
+        assert!(versions.len() > 0);
+    }
+
+    #[test]
+    fn can_find_version_info() {
         let version = get_version_info();
         assert!(version.is_some());
     }
 
     #[test]
-    fn product_name() {
+    fn is_product_name_correct() {
         let test_data = [
             (5, 0, 0, "Windows 2000"),
             (5, 0, 1, "Windows 2000"),
