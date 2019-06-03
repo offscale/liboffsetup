@@ -54,6 +54,7 @@ script:
         -A clippy::deprecated_cfg_attr \
         -A clippy::for_loop_over_option
     elif [ -n "$CARGO_MAKE" ]; then
+      cargo install --force cargo-make
       cargo make
     else
       cargo test --all --features "$FEATURES"
