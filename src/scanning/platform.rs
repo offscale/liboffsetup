@@ -68,7 +68,7 @@ impl PlatformScanner {
 
     fn _get_architecture() -> Architecture {
         // Todo: get actual architecture
-        return Architecture::x86_64;
+        Architecture::X86_64
     }
 
     pub fn get_current_platform() -> Platform {
@@ -88,7 +88,7 @@ impl PlatformScanner {
             p.versions = version;
         }
 
-        return p;
+        p
     }
 }
 
@@ -121,8 +121,8 @@ pub enum PlatformName {
 
 #[derive(Debug, PartialEq)]
 pub enum Architecture {
-    x86_32,
-    x86_64,
+    X86_32,
+    X86_64,
     Unknown,
 }
 
