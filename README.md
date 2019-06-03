@@ -35,8 +35,13 @@ $ cargo make
 ```
 
 ### Notes for Windows
-Only tested/compiled with nightly-x86_64-pc-windows-msvc so far. Under msys2, nightly-x86_64-pc-windows-gnu does not link
-with the error: `ld: cannot find -lntdll` 
+Tested/compiled with nightly-x86_64-pc-windows-msvc and nightly-x86_64-pc-windows-gnu. 
+Under msys2, make sure that the following is in the **.cargo/config** file (update the paths if necessary):
+```
+[target.x86_64-pc-windows-gnu]
+linker = "C://msys64//mingw64//bin/gcc.exe"
+ar = "C://msys64//mingw64//bin//ar.exe"
+``` 
 
 ## License
 
