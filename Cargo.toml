@@ -1,14 +1,22 @@
 [package]
 name = "liboffsetup"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Samuel Marks @SamuelMarks", "Peter Badenhorst @dev10"]
 edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
 config = "0.9.3"
-structopt = "0.2.15"
+itertools = "0.8"
+lazy_static = "1.3"
+os_type = "2.2"
+structopt = "=0.2.15"
+structopt-derive = "=0.2.15"
 serde = { version = "1.0.91", features = ["derive"] }
 urlparse = "0.7.3"
 validator = "0.8.0"
 validator_derive = "0.8.0"
+walkdir = "2.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["sysinfoapi","winuser"] }

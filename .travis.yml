@@ -29,6 +29,12 @@ matrix:
       env: BUILD_FMT=1
     - rust: stable
       env: CLIPPY=1
+    - rust: nightly-2019-06-02
+      env: TEST=1
+      os:
+        - linux
+        - osx
+        - windows
 
 before_script:
   - export PATH=$HOME/.cargo/bin:$PATH
@@ -51,6 +57,8 @@ script:
       cargo clippy --all -- -D warnings \
         -A clippy::deprecated_cfg_attr \
         -A clippy::for_loop_over_option
+    elif [ -n "$TEST" ]; then
+      cargo test --all --verbose
     else
       cargo test --all --features "$FEATURES"
     fi
