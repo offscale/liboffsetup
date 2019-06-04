@@ -75,7 +75,7 @@ impl OffSetupCli {
         }
     }
 
-    fn run_uninstall_command(config: &OffSetup, remove_shared: bool) {
+    fn run_uninstall_command(config: &OffSetup, _remove_shared: bool) {
         match config.dry_run {
             Some(true) => {
                 println!("DRY-RUN: what would be removed");
