@@ -3,7 +3,7 @@ name = "liboffsetup"
 version = "0.0.6"
 authors = ["Samuel Marks @SamuelMarks", "Peter Badenhorst @dev10"]
 edition = "2018"
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 config = "0.9.3"

@@ -25,11 +25,14 @@ rust:
 
 matrix:
   include:
-    - rust: stable
+    - name: rustfmt --check
+      rust: stable
       env: BUILD_FMT=1
-    - rust: stable
+    - name: clippy
+      rust: stable
       env: CLIPPY=1
-    - rust: nightly-2019-06-02
+    - name: cargo test
+      rust: nightly-2019-06-02
       env: TEST=1
       os:
         - linux
