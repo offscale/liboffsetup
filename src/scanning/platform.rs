@@ -18,7 +18,7 @@ impl PlatformScanner {
     pub fn get_project_language_dependencies(dir: String) -> Option<Vec<LangDependencyName>> {
         let files: Vec<LangDependencyName> = WalkDir::new(dir)
             .into_iter()
-            .filter_map(|e| e.ok())
+            .filter_map(Result::ok)
             .filter_map(|d| {
                 if let Some(ext) = d.path().extension() {
                     match ext
