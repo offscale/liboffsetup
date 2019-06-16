@@ -45,6 +45,7 @@ before_script:
   - export XDG_RUNTIME_DIR="$(pwd)/socket"
   - cargo fetch
   - |
+    rustup update
     rustup component add rustfmt-preview
     rustup component list
     if [ -n "$CLIPPY" ]; then
