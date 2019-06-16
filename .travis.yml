@@ -29,7 +29,7 @@ matrix:
       rust: nightly
       env: BUILD_FMT=1
     - name: clippy
-      rust: nightly
+      rust: stable
       env: CLIPPY=1
     - name: cargo test
       rust: nightly
@@ -49,7 +49,7 @@ before_script:
     rustup component add rustfmt-preview
     rustup component list
     if [ -n "$CLIPPY" ]; then
-      rustup component add clippy-preview
+      rustup component add clippy
     fi
 os:
   - linux
