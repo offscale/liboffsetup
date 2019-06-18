@@ -13,6 +13,21 @@ pub struct PlatformScanner;
 
 pub type PlatformVersionAliases = Vec<String>;
 
+#[cfg(target_arch = "x86")]
+fn get_architecture() -> Architecture {
+    Architecture::X86_32
+}
+
+#[cfg(target_arch = "x86_64")]
+fn get_architecture() -> Architecture {
+    Architecture::X86_64
+}
+
+#[cfg(not(any(target_arch = "x86_64", target_arch = "x86")))]
+fn get_architecture() -> Architecture {
+    Architecture::Unknown
+}
+
 impl PlatformScanner {
     /// search given directory for specific language dependencies ie LangDependencyName
     pub fn get_project_language_dependencies(dir: String) -> Option<Vec<LangDependencyName>> {
@@ -65,31 +80,6 @@ impl PlatformScanner {
         let versions = os::get_platform_version();
         (PlatformName::Windows, versions)
     }
-
-    fn _get_architecture() -> Architecture {
-        // Todo: get actual architecture
-        Architecture::X86_64
-    }
-
-    pub fn get_current_platform() -> Platform {
-        let mut p = Platform {
-            arch: PlatformScanner::_get_architecture(),
-            name: PlatformName::Unknown,
-            versions: vec![],
-        };
-
-        if cfg!(windows) {
-            let (name, version) = PlatformScanner::_get_windows_platform_info();
-            p.name = name;
-            p.versions = version;
-        } else {
-            let (name, version) = PlatformScanner::_get_unix_platform_info();
-            p.name = name;
-            p.versions = version;
-        }
-
-        p
-    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -128,9 +118,31 @@ pub enum Architecture {
 
 #[derive(Debug, PartialEq)]
 pub struct Platform {
-    arch: Architecture,
-    name: PlatformName,
+    pub arch: Architecture,
+    pub name: PlatformName,
     versions: PlatformVersionAliases,
+}
+
+impl Default for Platform {
+    fn default() -> Platform {
+        let mut p = Platform {
+            arch: get_architecture(),
+            name: PlatformName::Unknown,
+            versions: vec![],
+        };
+
+        if cfg!(windows) {
+            let (name, version) = PlatformScanner::_get_windows_platform_info();
+            p.name = name;
+            p.versions = version;
+        } else {
+            let (name, version) = PlatformScanner::_get_unix_platform_info();
+            p.name = name;
+            p.versions = version;
+        }
+
+        p
+    }
 }
 
 #[cfg(test)]
@@ -209,7 +221,7 @@ mod tests {
 
     #[test]
     fn can_get_platform() {
-        let p = PlatformScanner::get_current_platform();
+        let p = Platform::default();
         if cfg!(windows) {
             assert_eq!(p.name, PlatformName::Windows, "should be Windows")
         } else if cfg!(unix) {

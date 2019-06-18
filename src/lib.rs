@@ -7,10 +7,12 @@ use std::path::PathBuf;
 use std::{
     collections::HashMap,
     env,
+    process::{Command as SystemCommand},
     string::{ParseError, ToString},
 };
 
 use config::{Config, ConfigError, Environment, File, FileFormat};
+use scanning::platform::{Platform as CurrentPlatform, PlatformName};
 use serde::{Deserialize, Deserializer};
 use structopt::StructOpt;
 use urlparse::{urlparse, Url};
@@ -32,24 +34,25 @@ pub struct OffSetup {
 }
 
 impl OffSetupCli {
-    fn process_command(cli: OffSetupCli, config: OffSetup) -> (OffSetupCli, OffSetup) {
-        match cli.clone().cmd {
+    fn process_command(&self, config: OffSetup, current_platform: &CurrentPlatform) -> OffSetup {
+        match self.cmd {
             Command::Init => OffSetupCli::run_new_command(&config),
-            Command::Install => OffSetupCli::run_install_command(&config),
+            Command::Install => OffSetupCli::run_install_command(&config, &current_platform),
             Command::Uninstall { remove_shared } => {
                 OffSetupCli::run_uninstall_command(&config, remove_shared)
             }
             Command::Start => OffSetupCli::run_start_command(&config),
             Command::Stop => OffSetupCli::run_stop_command(&config),
         }
-        (cli, config)
+        config
     }
 
     pub fn run() -> (OffSetupCli, OffSetup) {
         let args: OffSetupCli = OffSetupCli::from_args();
         let config = OffSetup::with_cli(args.clone());
+        let current_platform = CurrentPlatform::default();
         match config {
-            Ok(c) => OffSetupCli::process_command(args, c),
+            Ok(c) => (args.clone(), args.process_command(c, &current_platform)),
             Err(e) => panic!("Failed to load configuration file: {:#?}", e),
         }
     }
@@ -65,13 +68,15 @@ impl OffSetupCli {
         }
     }
 
-    fn run_install_command(config: &OffSetup) {
+    fn run_install_command(config: &OffSetup, current_platform: &CurrentPlatform) {
         match config.dry_run {
             Some(true) => {
                 println!("DRY-RUN: what would be installed");
                 println!("...");
             }
-            _ => unimplemented!(),
+            _ => {
+                config.dependencies.iter().for_each(|d| d.install(current_platform));
+            },
         }
     }
 
@@ -270,6 +275,56 @@ struct System {
 struct Dependencies {
     applications: Option<HashMap<String, Application>>,
     platforms: Option<HashMap<String, Platform>>,
+}
+
+fn process_bash(command: &str) {
+    SystemCommand::new("sh")
+        .args(command.split(" "))
+        .output()
+        .expect(format!("Command `{}` failed", command).as_str());
+}
+
+fn process_pre_install_linux(pre_install: &Option<Vec<String>>) {
+    match pre_install {
+        Some(script) => {
+            script.iter().for_each(|s| process_bash(s.as_str()));
+        },
+        None => {},
+    }
+}
+
+fn install_arch(platform: &Platform) {
+    process_pre_install_linux(&platform.pre_install);
+}
+
+fn install_platform(name: &str, platform: &Platform, current_platform: &CurrentPlatform) {
+    println!("{:?} {:?} {:?}", name, platform, current_platform);
+    match (&current_platform.name, name) {
+        (PlatformName::Arch, "arch") => install_arch(platform),
+        _ => unimplemented!(),
+    };
+}
+
+impl Dependencies {
+    fn install(&self, current_platform: &CurrentPlatform) {
+        self.install_applications();
+        self.install_platforms(current_platform);
+    }
+
+    fn install_platforms(&self, current_platform: &CurrentPlatform) {
+        match &self.platforms {
+            Some(platforms) => {
+                for (platform_name, platform) in platforms {
+                    install_platform(platform_name.as_str(), platform, current_platform);
+                }
+            },
+            None => {},
+        };
+    }
+
+    fn install_applications(&self) {
+
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
