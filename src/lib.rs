@@ -284,7 +284,23 @@ fn process_bash(command: &str) {
         .expect(format!("Command `{}` failed", command).as_str());
 }
 
-fn process_pre_install_linux(pre_install: &Option<Vec<String>>) {
+fn process_cmd(command: &str) {
+    SystemCommand::new("cmd")
+        .args(command.split(" "))
+        .output()
+        .expect(format!("Command `{}` failed", command).as_str());
+}
+
+fn process_pre_install_windows(pre_install: &Option<Vec<String>>) {
+    match pre_install {
+        Some(script) => {
+            script.iter().for_each(|s| process_cmd(s.as_str()));
+        },
+        None => {},
+    }
+}
+
+fn process_pre_install_unix_like(pre_install: &Option<Vec<String>>) {
     match pre_install {
         Some(script) => {
             script.iter().for_each(|s| process_bash(s.as_str()));
@@ -293,15 +309,50 @@ fn process_pre_install_linux(pre_install: &Option<Vec<String>>) {
     }
 }
 
+fn install_centos(platform: &Platform) {
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
+fn install_debian(platform: &Platform) {
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
+fn install_manjaro(platform: &Platform) {
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
+fn install_redhat(platform: &Platform) {
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
+fn install_ubuntu(platform: &Platform) {
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
+fn install_macos(platform: &Platform) {
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
 fn install_arch(platform: &Platform) {
-    process_pre_install_linux(&platform.pre_install);
+    process_pre_install_unix_like(&platform.pre_install);
+}
+
+fn install_windows(platform: &Platform) {
+    process_pre_install_windows(&platform.pre_install);
 }
 
 fn install_platform(name: &str, platform: &Platform, current_platform: &CurrentPlatform) {
     println!("{:?} {:?} {:?}", name, platform, current_platform);
     match (&current_platform.name, name) {
         (PlatformName::Arch, "arch") => install_arch(platform),
-        _ => unimplemented!(),
+        (PlatformName::CentOS, "centos") => install_centos(platform),
+        (PlatformName::Debian, "debian") => install_debian(platform),
+        (PlatformName::Manjaro, "manjaro") => install_manjaro(platform),
+        (PlatformName::Redhat, "redhat") => install_redhat(platform),
+        (PlatformName::Ubuntu, "ubuntu") => install_ubuntu(platform),
+        (PlatformName::MacOSX, "mac") => install_macos(platform),
+        (PlatformName::Windows, "windows") => install_windows(platform),
+        (PlatformName::Unknown, "unknown") => panic!("WHAT YO' DOIN'"),
     };
 }
 
