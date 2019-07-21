@@ -4,6 +4,7 @@ use itertools::Itertools;
 use walkdir::WalkDir;
 
 use crate::scanning::os;
+use std::str::FromStr;
 
 /// PlatformScanner retrieves information based on what platform the binary is running on.
 /// It is meant to be used for
@@ -107,6 +108,45 @@ pub enum PlatformName {
     Ubuntu,
     Unknown,
     Windows,
+}
+
+#[derive(Debug)]
+pub enum PlatformNameParsingError {
+    InvalidPlatform,
+}
+
+impl FromStr for PlatformName {
+    type Err = PlatformNameParsingError;
+    fn from_str(name: &str) -> Result<PlatformName, PlatformNameParsingError> {
+        match name {
+            "arch" => Ok(PlatformName::Arch),
+            "centos" => Ok(PlatformName::CentOS),
+            "debian" => Ok(PlatformName::Debian),
+            "macos" => Ok(PlatformName::MacOSX),
+            "manjaro" => Ok(PlatformName::Manjaro),
+            "redhat" => Ok(PlatformName::Redhat),
+            "ubuntu" => Ok(PlatformName::Ubuntu),
+            "unknown" => Ok(PlatformName::Unknown),
+            "windows" => Ok(PlatformName::Windows),
+            _ => Err(PlatformNameParsingError::InvalidPlatform),
+        }
+    }
+}
+
+impl ToString for PlatformName {
+    fn to_string(&self) -> String {
+        match self {
+            PlatformName::Arch => "arch",
+            PlatformName::CentOS => "centos",
+            PlatformName::Debian => "debian",
+            PlatformName::MacOSX => "macos",
+            PlatformName::Manjaro => "manjaro",
+            PlatformName::Redhat => "redhat",
+            PlatformName::Ubuntu => "ubuntu",
+            PlatformName::Unknown => "unknown",
+            PlatformName::Windows => "windows",
+        }.to_string()
+    }
 }
 
 #[derive(Debug, PartialEq)]

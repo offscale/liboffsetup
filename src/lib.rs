@@ -9,6 +9,7 @@ use std::{
     env,
     process::{Command as SystemCommand},
     string::{ParseError, ToString},
+    str::FromStr,
 };
 
 use config::{Config, ConfigError, Environment, File, FileFormat};
@@ -341,18 +342,17 @@ fn install_windows(platform: &Platform) {
     process_pre_install_windows(&platform.pre_install);
 }
 
-fn install_platform(name: &str, platform: &Platform, current_platform: &CurrentPlatform) {
-    println!("{:?} {:?} {:?}", name, platform, current_platform);
-    match (&current_platform.name, name) {
-        (PlatformName::Arch, "arch") => install_arch(platform),
-        (PlatformName::CentOS, "centos") => install_centos(platform),
-        (PlatformName::Debian, "debian") => install_debian(platform),
-        (PlatformName::Manjaro, "manjaro") => install_manjaro(platform),
-        (PlatformName::Redhat, "redhat") => install_redhat(platform),
-        (PlatformName::Ubuntu, "ubuntu") => install_ubuntu(platform),
-        (PlatformName::MacOSX, "mac") => install_macos(platform),
-        (PlatformName::Windows, "windows") => install_windows(platform),
-        (PlatformName::Unknown, "unknown") => panic!("WHAT YO' DOIN'"),
+fn install_platform(platform: &Platform, current_platform: &CurrentPlatform) {
+    match &current_platform.name {
+        PlatformName::Arch => install_arch(platform),
+        PlatformName::CentOS => install_centos(platform),
+        PlatformName::Debian => install_debian(platform),
+        PlatformName::Manjaro => install_manjaro(platform),
+        PlatformName::Redhat => install_redhat(platform),
+        PlatformName::Ubuntu => install_ubuntu(platform),
+        PlatformName::MacOSX => install_macos(platform),
+        PlatformName::Windows => install_windows(platform),
+        PlatformName::Unknown => panic!("WHAT YO' DOIN'"),
     };
 }
 
@@ -365,8 +365,8 @@ impl Dependencies {
     fn install_platforms(&self, current_platform: &CurrentPlatform) {
         match &self.platforms {
             Some(platforms) => {
-                for (platform_name, platform) in platforms {
-                    install_platform(platform_name.as_str(), platform, current_platform);
+                if let Some(p) = platforms.get(current_platform.name.to_string().as_str()) {
+                    install_platform(p, current_platform);
                 }
             },
             None => {},
