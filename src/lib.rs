@@ -310,24 +310,94 @@ fn process_pre_install_unix_like(pre_install: &Option<Vec<String>>) {
     }
 }
 
+fn run_apt_command(apt: &Vec<String>) {
+    let cmd = format!("apt-get install {}", apt.join(" "));
+    process_bash(cmd.as_str());
+}
+
+fn run_pacman_command(pacman: &Vec<String>) {
+    let cmd = format!("pacman -S {}", pacman.join(" "));
+    process_bash(cmd.as_str());
+}
+
+fn run_yum_command(yum: &Vec<String>) {
+    let cmd = format!("yum install {}", yum.join(" "));
+    process_bash(cmd.as_str());
+}
+
+fn run_download_unix(download: &Download, directory: &Option<String>) {
+    unimplemented!()
+}
+
+fn run_arch_source(source: &Source) {
+    if let Some(system) = &source.system {
+        if let Some(pacman) = &system.pacman {
+            run_pacman_command(pacman);
+        }
+    }
+    if let Some(download) = &source.download {
+        run_download_unix(download, &source.download_directory);
+    }
+}
+
+fn run_debian_source(source: &Source) {
+    if let Some(system) = &source.system {
+        if let Some(apt) = &system.apt {
+            run_apt_command(apt);
+        }
+        if let Some(apt_get) = &system.apt_get {
+            run_apt_command(apt_get);
+        }
+    }
+    if let Some(download) = &source.download {
+        run_download_unix(download, &source.download_directory);
+    }
+}
+
+fn run_redhat_source(source: &Source) {
+    if let Some(system) = &source.system {
+        if let Some(yum) = &system.yum {
+            run_yum_command(yum);
+        }
+    }
+    if let Some(download) = &source.download {
+        run_download_unix(download, &source.download_directory);
+    }
+}
+
 fn install_centos(platform: &Platform) {
     process_pre_install_unix_like(&platform.pre_install);
+    if let Some(source) = &platform.source {
+        run_redhat_source(source);
+    }
 }
 
 fn install_debian(platform: &Platform) {
     process_pre_install_unix_like(&platform.pre_install);
+    if let Some(source) = &platform.source {
+        run_debian_source(source);
+    }
 }
 
 fn install_manjaro(platform: &Platform) {
     process_pre_install_unix_like(&platform.pre_install);
+    if let Some(source) = &platform.source {
+        run_arch_source(source);
+    }
 }
 
 fn install_redhat(platform: &Platform) {
     process_pre_install_unix_like(&platform.pre_install);
+    if let Some(source) = &platform.source {
+        run_redhat_source(source);
+    }
 }
 
 fn install_ubuntu(platform: &Platform) {
     process_pre_install_unix_like(&platform.pre_install);
+    if let Some(source) = &platform.source {
+        run_debian_source(source);
+    }
 }
 
 fn install_macos(platform: &Platform) {
@@ -336,6 +406,9 @@ fn install_macos(platform: &Platform) {
 
 fn install_arch(platform: &Platform) {
     process_pre_install_unix_like(&platform.pre_install);
+    if let Some(source) = &platform.source {
+        run_arch_source(source);
+    }
 }
 
 fn install_windows(platform: &Platform) {
