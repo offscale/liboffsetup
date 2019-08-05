@@ -7,9 +7,8 @@ use std::path::PathBuf;
 use std::{
     collections::HashMap,
     env,
-    process::{Command as SystemCommand},
+    process::Command as SystemCommand,
     string::{ParseError, ToString},
-    str::FromStr,
 };
 
 use config::{Config, ConfigError, Environment, File, FileFormat};
@@ -76,8 +75,11 @@ impl OffSetupCli {
                 println!("...");
             }
             _ => {
-                config.dependencies.iter().for_each(|d| d.install(current_platform));
-            },
+                config
+                    .dependencies
+                    .iter()
+                    .for_each(|d| d.install(current_platform));
+            }
         }
     }
 
@@ -296,8 +298,8 @@ fn process_pre_install_windows(pre_install: &Option<Vec<String>>) {
     match pre_install {
         Some(script) => {
             script.iter().for_each(|s| process_cmd(s.as_str()));
-        },
-        None => {},
+        }
+        None => {}
     }
 }
 
@@ -305,8 +307,8 @@ fn process_pre_install_unix_like(pre_install: &Option<Vec<String>>) {
     match pre_install {
         Some(script) => {
             script.iter().for_each(|s| process_bash(s.as_str()));
-        },
-        None => {},
+        }
+        None => {}
     }
 }
 
@@ -441,14 +443,12 @@ impl Dependencies {
                 if let Some(p) = platforms.get(current_platform.name.to_string().as_str()) {
                     install_platform(p, current_platform);
                 }
-            },
-            None => {},
+            }
+            None => {}
         };
     }
 
-    fn install_applications(&self) {
-
-    }
+    fn install_applications(&self) {}
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -490,7 +490,7 @@ fn validate_source_download(data: &Source) -> Result<(), ValidationError> {
 }
 
 #[derive(Clone, Debug, Deserialize, Validate)]
-#[validate(schema(function = "validate_source_download", skip_on_field_errors = "false"))]
+#[validate(schema(function = "validate_source_download", skip_on_field_errors = false))]
 struct Source {
     // TODO: find out if automatic/implicit validate() call can be made after Deserialize
     download_directory: Option<String>,

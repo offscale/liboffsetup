@@ -145,7 +145,8 @@ impl ToString for PlatformName {
             PlatformName::Ubuntu => "ubuntu",
             PlatformName::Unknown => "unknown",
             PlatformName::Windows => "windows",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
